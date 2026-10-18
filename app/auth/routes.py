@@ -100,6 +100,7 @@ def login():
                 # Defend against Session Fixation: clear old session and re-issue fresh session ID
                 session.clear()
                 session['user_id'] = user['id']
+                session.permanent = True
                 generate_csrf_token()
 
                 log_audit_event(

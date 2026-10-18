@@ -248,7 +248,7 @@ def edit(ticket_id):
     db = get_db()
     ticket = db.execute(
         """
-        SELECT t.id, t.title, t.description, t.priority, t.status, t.category_id,
+        SELECT t.id, t.title, t.description, t.priority, t.status, t.category_id, t.requester_id,
                c.name AS category_name
         FROM tickets t
         JOIN categories c ON t.category_id = c.id
@@ -259,6 +259,16 @@ def edit(ticket_id):
 
     if ticket is None:
         abort(404, description=f"Ticket #{ticket_id} not found.")
+
+    # Server-Side Authorization & IDOR Defense (Phase 3)
+    if g.user and g.user['role_name'] == 'requester' and ticket['requester_id'] != g.user['id']:
+        log_audit_event(
+            action='UNAUTHORIZED_TICKET_EDIT_ATTEMPT',
+            target_type='ticket',
+            target_id=ticket_id,
+            details=f"Requester '{g.user['username']}' attempted unauthorized edit of ticket #{ticket_id}"
+        )
+        abort(403, description="Access Forbidden: You do not have permission to edit this ticket.")
 
     categories = db.execute("SELECT id, name FROM categories ORDER BY name ASC").fetchall()
 
@@ -289,10 +299,18 @@ def edit(ticket_id):
                 error = 'Selected category does not exist.'
 
         if error is None:
+            # Requesters cannot tamper with priority or status; only agents/admins can modify them
+            if g.user and g.user['role_name'] == 'requester':
+                priority_to_save = ticket['priority']
+                status_to_save = ticket['status']
+            else:
+                priority_to_save = priority
+                status_to_save = status
+
             resolved_at_sql = ""
-            if status in ('resolved', 'closed') and ticket['status'] not in ('resolved', 'closed'):
+            if status_to_save in ('resolved', 'closed') and ticket['status'] not in ('resolved', 'closed'):
                 resolved_at_sql = ", resolved_at = CURRENT_TIMESTAMP"
-            elif status in ('open', 'in_progress'):
+            elif status_to_save in ('open', 'in_progress'):
                 resolved_at_sql = ", resolved_at = NULL"
 
             db.execute(
@@ -302,7 +320,7 @@ def edit(ticket_id):
                     updated_at = CURRENT_TIMESTAMP {resolved_at_sql}
                 WHERE id = ?
                 """,
-                (title, description, int(category_id), priority, status, ticket_id)
+                (title, description, int(category_id), priority_to_save, status_to_save, ticket_id)
             )
             db.commit()
 
@@ -310,7 +328,7 @@ def edit(ticket_id):
                 action='TICKET_EDITED',
                 target_type='ticket',
                 target_id=ticket_id,
-                details=f"Edited ticket #{ticket_id}: title='{title}', priority='{priority}', status='{status}'",
+                details=f"Edited ticket #{ticket_id}: title='{title}', priority='{priority_to_save}', status='{status_to_save}'",
                 user_id=g.user['id'] if g.user else None
             )
 

@@ -22,7 +22,7 @@
                 <a href="{{ url_for('analytics.dashboard') }}" class="brand-link">
                     <span class="brand-icon">⚡</span>
                     <span class="brand-title">Ops<strong>Lens</strong></span>
-                    <span class="brand-tag">Phase 2</span>
+                    <span class="brand-tag">v1.2</span>
                 </a>
             </div>
 
@@ -36,6 +36,11 @@
                 <a href="{{ url_for('tickets.create') }}" class="btn btn-primary btn-sm">
                     + New Ticket
                 </a>
+                {% if g.user and g.user.role_name == 'admin' %}
+                <a href="{{ url_for('admin.users') }}" class="nav-item {% if request.blueprint == 'admin' %}active{% endif %}">
+                    👥 User Governance
+                </a>
+                {% endif %}
             </nav>
 
             <div class="nav-user">
@@ -51,9 +56,9 @@
                     </button>
                 </form>
                 {% else %}
-                <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3);">
-                    🟢 Core Mode
-                </span>
+                <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-sm">
+                    Sign In 🔑
+                </a>
                 {% endif %}
             </div>
         </div>

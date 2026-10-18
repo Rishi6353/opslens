@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}User Management &amp; Access Control{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 style="font-size: 1.85rem; margin-bottom: 0.25rem;">User &amp; Access Governance</h1>
+        <p style="color: var(--text-secondary); font-size: 0.95rem;">
+            Administrative control of enterprise accounts, RBAC permissions, and active statuses.
+        </p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Registered Enterprise Accounts</h2>
+        <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc;">
+            {{ users|length }} User(s)
+        </span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th style="width: 60px;">ID</th>
+                    <th>User &amp; Email</th>
+                    <th style="width: 140px;">Current Role</th>
+                    <th style="width: 120px;">Account Status</th>
+                    <th style="width: 160px;">Created Date</th>
+                    <th style="text-align: right;">Administrative Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td class="table-code">#{{ u.id }}</td>
+                    <td>
+                        <div style="font-weight: 600; color: var(--text-primary);">{{ u.username }}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">{{ u.email }}</div>
+                    </td>
+                    <td>
+                        <span class="role-badge role-{{ u.role_name }}">{{ u.role_name | capitalize }}</span>
+                    </td>
+                    <td>
+                        {% if u.is_active == 1 %}
+                        <span class="badge" style="background-color: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);">
+                            ● Active
+                        </span>
+                        {% else %}
+                        <span class="badge" style="background-color: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);">
+                            ○ Deactivated
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="table-code" style="font-size: 0.8rem;">
+                        {{ u.created_at[:16] }}
+                    </td>
+                    <td style="text-align: right;">
+                        {% if u.id == g.user.id %}
+                        <span style="font-size: 0.8rem; color: var(--text-muted); font-style: italic;">
+                            Current Session
+                        </span>
+                        {% else %}
+                        <div style="display: inline-flex; gap: 0.5rem; align-items: center;">
+                            <!-- Change Role Form -->
+                            <form action="{{ url_for('admin.change_user_role', user_id=u.id) }}" method="POST" class="inline-form">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <select name="role_id" onchange="this.form.submit()" class="form-select" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; width: auto; display: inline-block;">
+                                    {% for r in roles %}
+                                    <option value="{{ r.id }}" {% if u.role_id == r.id %}selected{% endif %}>
+                                        Set {{ r.name | capitalize }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </form>
+
+                            <!-- Toggle Status Form -->
+                            <form action="{{ url_for('admin.toggle_user_status', user_id=u.id) }}" method="POST" class="inline-form">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                {% if u.is_active == 1 %}
+                                <button type="submit" class="btn btn-ghost btn-sm" style="color: #f87171; border-color: rgba(239, 68, 68, 0.4);" title="Deactivate user account">
+                                    Deactivate 🚫
+                                </button>
+                                {% else %}
+                                <button type="submit" class="btn btn-ghost btn-sm" style="color: #34d399; border-color: rgba(16, 185, 129, 0.4);" title="Reactivate user account">
+                                    Reactivate ✓
+                                </button>
+                                {% endif %}
+                            </form>
+                        </div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,4 +1,6 @@
+from datetime import timedelta
 import os
+import warnings
 from flask import Flask, render_template
 from app.security.csrf import generate_csrf_token, validate_csrf
 
@@ -18,6 +20,7 @@ def create_app(test_config=None):
     app.config.from_mapping(
         SECRET_KEY=os.environ.get('SECRET_KEY', 'dev-secret-fallback-key-do-not-use-in-prod'),
         DATABASE=os.path.join(app.instance_path, 'opslens.db'),
+        PERMANENT_SESSION_LIFETIME=timedelta(hours=2),  # 2-hour session expiration
         SESSION_COOKIE_HTTPONLY=True,    # Mitigate XSS stealing session cookies
         SESSION_COOKIE_SAMESITE='Lax',   # Mitigate CSRF on top-level navigations
     )
@@ -28,6 +31,10 @@ def create_app(test_config=None):
     else:
         # Load the test config if passed in
         app.config.from_mapping(test_config)
+
+    # Security check: warn if default insecure secret is used in development/production
+    if app.config['SECRET_KEY'] == 'dev-secret-fallback-key-do-not-use-in-prod' and not app.config.get('TESTING'):
+        warnings.warn("Security Alert: Using fallback SECRET_KEY. Configure a strong secret key in .env.")
 
     # Ensure the instance folder exists
     try:
@@ -62,6 +69,9 @@ def create_app(test_config=None):
     # Register blueprints
     from app.auth.routes import bp as auth_bp
     app.register_blueprint(auth_bp)
+
+    from app.admin.routes import bp as admin_bp
+    app.register_blueprint(admin_bp)
 
     from app.tickets.routes import bp as tickets_bp
     app.register_blueprint(tickets_bp)
