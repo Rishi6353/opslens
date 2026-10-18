@@ -140,3 +140,4 @@ def test_phase2_ticket_status_update(app, client):
         assert ticket['status'] == 'resolved'
         assert ticket['priority'] == 'medium'
         assert ticket['resolved_at'] is not None
+
