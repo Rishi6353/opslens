@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign In{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">⚡</div>
+            <h1>Ops<strong>Lens</strong> Access</h1>
+            <p>IT Operations, Incident Management &amp; Analytics</p>
+        </div>
+
+        <form action="{{ url_for('auth.login', next=request.args.get('next')) }}" method="POST">
+            <!-- CSRF Protection Token -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="form-group">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" id="username" name="username" class="form-control" placeholder="e.g. admin or sarah_agent" required autofocus autocomplete="username">
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" id="password" name="password" class="form-control" placeholder="••••••••••••" required autocomplete="current-password">
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" style="padding: 0.75rem; margin-top: 1rem;">
+                Sign In to Platform &rarr;
+            </button>
+        </form>
+
+        <!-- Portfolio Demo Account Helper -->
+        <details class="demo-credentials-box" open>
+            <summary>🔑 Quick Demo Accounts (Click to Auto-Fill)</summary>
+            <div style="margin-top: 0.6rem; display: flex; flex-direction: column; gap: 0.4rem;">
+                <button type="button" class="btn btn-ghost btn-sm" style="justify-content: space-between;" onclick="fillDemoCredentials('admin', 'Password123!')">
+                    <span>👑 <strong>Admin</strong> (System Admin)</span>
+                    <span class="role-badge role-admin">admin</span>
+                </button>
+                <button type="button" class="btn btn-ghost btn-sm" style="justify-content: space-between;" onclick="fillDemoCredentials('sarah_agent', 'Password123!')">
+                    <span>🛠️ <strong>Support Agent</strong> (Sarah)</span>
+                    <span class="role-badge role-agent">agent</span>
+                </button>
+                <button type="button" class="btn btn-ghost btn-sm" style="justify-content: space-between;" onclick="fillDemoCredentials('john_requester', 'Password123!')">
+                    <span>👤 <strong>Requester</strong> (John Doe)</span>
+                    <span class="role-badge role-requester">requester</span>
+                </button>
+            </div>
+            <p style="margin-top: 0.6rem; font-size: 0.75rem; color: var(--text-muted);">
+                Password for all demo accounts: <code class="table-code">Password123!</code>
+            </p>
+        </details>
+    </div>
+</div>
+{% endblock %}

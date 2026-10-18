@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+
+{% block title %}Ticket #{{ ticket.id }} &mdash; {{ ticket.title }}{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb / Back link -->
+<div style="margin-bottom: 1.25rem;">
+    <a href="{{ url_for('tickets.index') }}" style="color: var(--text-secondary); font-size: 0.9rem;">
+        &larr; Back to all tickets
+    </a>
+</div>
+
+<div class="detail-grid">
+    <!-- Left Column: Incident Content & Conversation Timeline -->
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <!-- Ticket Overview Card -->
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                <div>
+                    <span class="table-code" style="font-size: 0.9rem; color: var(--primary);">Ticket #{{ ticket.id }}</span>
+                    <h1 style="font-size: 1.5rem; margin-top: 0.25rem;">{{ ticket.title }}</h1>
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <span class="priority-badge priority-{{ ticket.priority }}">{{ ticket.priority }}</span>
+                    <span class="status-badge status-{{ ticket.status }}">{{ ticket.status | replace('_', ' ') }}</span>
+                </div>
+            </div>
+
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                <span>📂 Category: <strong>{{ ticket.category_name }}</strong></span>
+                <span>📅 Reported: <span class="table-code">{{ ticket.created_at }}</span></span>
+            </div>
+
+            <!-- Description Body -->
+            <div style="background-color: var(--bg-main); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1.25rem; font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap; color: #f1f5f9;">{{ ticket.description }}</div>
+        </div>
+
+        <!-- Discussion Timeline & Internal Notes -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Discussion &amp; Work Notes</h2>
+                <span class="badge" style="background: rgba(255,255,255,0.05); color: var(--text-secondary);">
+                    {{ comments|length }} Note(s)
+                </span>
+            </div>
+
+            <div class="comments-list">
+                {% for c in comments %}
+                <div class="comment-card {% if c.is_internal %}internal-note{% endif %}">
+                    <div class="comment-header">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span class="comment-author">👤 {{ c.username }}</span>
+                            <span class="role-badge role-{{ c.role_name }}">{{ c.role_name }}</span>
+                            {% if c.is_internal %}
+                            <span class="badge" style="background-color: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4);">
+                                🔒 Confidential Agent Note
+                            </span>
+                            {% endif %}
+                        </div>
+                        <span class="comment-time table-code">{{ c.created_at }}</span>
+                    </div>
+                    <div class="comment-body">{{ c.comment }}</div>
+                </div>
+                {% else %}
+                <p style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 1.5rem 0;">
+                    No updates or notes posted on this incident yet.
+                </p>
+                {% endfor %}
+            </div>
+
+            <!-- Add Comment Form -->
+            <form action="{{ url_for('tickets.add_comment', ticket_id=ticket.id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-group">
+                    <label for="comment" class="form-label">Add a response or update</label>
+                    <textarea name="comment" id="comment" rows="3" class="form-control" placeholder="Type your response here..." required></textarea>
+                </div>
+
+                {% if g.user.role_name in ('admin', 'agent') %}
+                <div style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" name="is_internal" id="is_internal" value="1">
+                    <label for="is_internal" style="font-size: 0.85rem; color: #fbbf24; cursor: pointer;">
+                        🔒 Mark as internal note (invisible to Requester)
+                    </label>
+                </div>
+                {% endif %}
+
+                <button type="submit" class="btn btn-secondary">
+                    Post Update &rarr;
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Right Column: Status Controls & Metadata -->
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <!-- Status & Workflow Management Card -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Workflow Actions</h2>
+            </div>
+
+            {% if g.user.role_name in ('admin', 'agent') %}
+            <!-- Agent / Admin Management Form -->
+            <form action="{{ url_for('tickets.update_status', ticket_id=ticket.id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-group">
+                    <label for="status" class="form-label">Lifecycle Status</label>
+                    <select name="status" id="status" class="form-select">
+                        {% for st in valid_statuses %}
+                        <option value="{{ st }}" {% if ticket.status == st %}selected{% endif %}>
+                            {{ st | replace('_', ' ') | capitalize }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="priority" class="form-label">Incident Priority</label>
+                    <select name="priority" id="priority" class="form-select">
+                        {% for pr in valid_priorities %}
+                        <option value="{{ pr }}" {% if ticket.priority == pr %}selected{% endif %}>
+                            {{ pr | capitalize }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="assignee_id" class="form-label">Assignee</label>
+                    <select name="assignee_id" id="assignee_id" class="form-select">
+                        <option value="">-- Unassigned --</option>
+                        {% for ag in agents %}
+                        <option value="{{ ag.id }}" {% if ticket.assignee_id == ag.id %}selected{% endif %}>
+                            {{ ag.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                    Save Changes
+                </button>
+            </form>
+
+            {% elif g.user.role_name == 'requester' %}
+                {% if ticket.status == 'resolved' %}
+                <form action="{{ url_for('tickets.update_status', ticket_id=ticket.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="status" value="closed">
+                    <p style="font-size: 0.85rem; color: #34d399; margin-bottom: 0.75rem;">
+                        The support team has resolved this incident. If your issue is resolved, please close the ticket.
+                    </p>
+                    <button type="submit" class="btn btn-primary btn-block">
+                        Confirm &amp; Close Ticket ✓
+                    </button>
+                </form>
+                {% else %}
+                <p style="font-size: 0.85rem; color: var(--text-muted);">
+                    Ticket is currently <strong>{{ ticket.status | replace('_', ' ') }}</strong>. Our support agents are actively reviewing it.
+                </p>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- Metadata Information -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Incident Metadata</h2>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.85rem;">
+                <div>
+                    <span class="form-label">Requester</span>
+                    <div style="font-weight: 500;">{{ ticket.requester_name }}</div>
+                    <div style="color: var(--text-muted); font-size: 0.75rem;">{{ ticket.requester_email }}</div>
+                </div>
+                <div>
+                    <span class="form-label">Assigned Specialist</span>
+                    <div style="font-weight: 500;">{{ ticket.assignee_name or 'Unassigned' }}</div>
+                </div>
+                <div>
+                    <span class="form-label">Created At</span>
+                    <div class="table-code">{{ ticket.created_at }}</div>
+                </div>
+                <div>
+                    <span class="form-label">Last Updated</span>
+                    <div class="table-code">{{ ticket.updated_at }}</div>
+                </div>
+                {% if ticket.resolved_at %}
+                <div>
+                    <span class="form-label">Resolved At</span>
+                    <div class="table-code" style="color: var(--success);">{{ ticket.resolved_at }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Ticket Audit History -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Ticket Audit Trail</h2>
+            </div>
+            <div style="display: flex; flex-direction: column;">
+                {% for log in audit_trail %}
+                <div class="audit-item">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="audit-action">{{ log.action }}</span>
+                        <span class="table-code" style="font-size: 0.7rem;">{{ log.created_at[:16] }}</span>
+                    </div>
+                    <div style="color: var(--text-secondary); font-size: 0.75rem; margin-top: 2px;">
+                        {{ log.details }}
+                    </div>
+                </div>
+                {% else %}
+                <p style="color: var(--text-muted); font-size: 0.8rem;">No audit logs found for this ticket.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

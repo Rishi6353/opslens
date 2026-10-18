@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+
+{% block title %}User Profile{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+    <h1 style="font-size: 1.75rem; margin-bottom: 0.25rem;">User Profile &amp; Identity</h1>
+    <p style="color: var(--text-secondary); font-size: 0.95rem;">Authenticated session details and personal audit history</p>
+</div>
+
+<div class="detail-grid">
+    <!-- Left Column: User Card -->
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Identity Overview</h2>
+                <span class="role-badge role-{{ user.role_name }}">{{ user.role_name | capitalize }}</span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; font-size: 0.95rem;">
+                <div>
+                    <label class="form-label">Username</label>
+                    <div style="font-weight: 600; color: var(--text-primary);">{{ user.username }}</div>
+                </div>
+                <div>
+                    <label class="form-label">Email Address</label>
+                    <div style="color: var(--text-primary);">{{ user.email }}</div>
+                </div>
+                <div>
+                    <label class="form-label">Role Definition</label>
+                    <div style="color: var(--text-secondary); font-size: 0.85rem;">{{ user.role_description }}</div>
+                </div>
+                <div>
+                    <label class="form-label">Account Created</label>
+                    <div class="table-code">{{ user.created_at }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Security & RBAC Capabilities -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Role Capabilities (RBAC)</h2>
+            </div>
+            <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.9rem;">
+                <li style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="color: var(--success);">✓</span> Create, track, and comment on own incident tickets
+                </li>
+                {% if user.role_name in ('admin', 'agent') %}
+                <li style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="color: var(--success);">✓</span> View and manage all organizational tickets
+                </li>
+                <li style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="color: var(--success);">✓</span> Update ticket priority, status, and assignees
+                </li>
+                <li style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="color: var(--success);">✓</span> Author confidential internal agent notes
+                </li>
+                {% else %}
+                <li style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-muted);">
+                    <span>✗</span> Restricted from inspecting cross-department tickets
+                </li>
+                <li style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-muted);">
+                    <span>✗</span> Restricted from authoring internal support notes
+                </li>
+                {% endif %}
+
+                {% if user.role_name == 'admin' %}
+                <li style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="color: var(--success);">✓</span> Full system administration &amp; enterprise audit trail inspection
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- Right Column: Personal Audit History -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Recent Security Events</h2>
+            <span class="badge" style="background: rgba(255,255,255,0.05); color: var(--text-secondary);">Last 10 Actions</span>
+        </div>
+        <div style="display: flex; flex-direction: column;">
+            {% for item in activity %}
+            <div class="audit-item">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                    <span class="audit-action">{{ item.action }}</span>
+                    <span class="table-code" style="font-size: 0.75rem;">{{ item.created_at }}</span>
+                </div>
+                <div style="color: var(--text-secondary); font-size: 0.8rem;">
+                    {{ item.details or 'Action logged' }}
+                </div>
+                <div class="table-code" style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">
+                    IP: {{ item.ip_address }}
+                </div>
+            </div>
+            {% else %}
+            <p style="color: var(--text-muted); font-size: 0.85rem; padding: 1rem 0;">No security events recorded yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

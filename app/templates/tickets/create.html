@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Incident Ticket{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem;">
+    <a href="{{ url_for('tickets.index') }}" style="color: var(--text-secondary); font-size: 0.9rem;">
+        &larr; Back to tickets list
+    </a>
+    <h1 style="font-size: 1.75rem; margin-top: 0.5rem; margin-bottom: 0.25rem;">Raise New Incident or Request</h1>
+    <p style="color: var(--text-secondary); font-size: 0.95rem;">Provide clear, detailed context to help our engineering and support specialists triage quickly.</p>
+</div>
+
+<div class="detail-grid">
+    <div class="card">
+        <form action="{{ url_for('tickets.create') }}" method="POST">
+            <!-- CSRF Protection Token -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="form-group">
+                <label for="title" class="form-label">Incident Summary / Title <span style="color: var(--danger);">*</span></label>
+                <input type="text" id="title" name="title" class="form-control" maxlength="150" placeholder="e.g. Corporate VPN Gateway Timeout during peak hours" required autofocus>
+                <div class="form-help">Max 150 characters. Be concise and descriptive.</div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label for="category_id" class="form-label">Classification Category <span style="color: var(--danger);">*</span></label>
+                    <select id="category_id" name="category_id" class="form-select" required>
+                        <option value="">-- Choose Category --</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="priority" class="form-label">Urgency &amp; Priority <span style="color: var(--danger);">*</span></label>
+                    <select id="priority" name="priority" class="form-select" required>
+                        <option value="low">Low &mdash; Minor inconvenience, work continues</option>
+                        <option value="medium" selected>Medium &mdash; Impaired workflow, workaround available</option>
+                        <option value="high">High &mdash; Significant disruption to critical operations</option>
+                        <option value="critical">Critical &mdash; System down or active security incident</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="description" class="form-label">Detailed Description &amp; Reproduction Steps <span style="color: var(--danger);">*</span></label>
+                <textarea id="description" name="description" class="form-control" rows="6" placeholder="Describe what happened, error codes observed, device/host name, steps to reproduce, and business impact..." required></textarea>
+                <div class="form-help">Do not include plain-text passwords or secret keys.</div>
+            </div>
+
+            <div style="display: flex; gap: 1rem; align-items: center; margin-top: 1.5rem;">
+                <button type="submit" class="btn btn-primary" style="padding: 0.65rem 1.5rem;">
+                    Submit Incident Ticket &rarr;
+                </button>
+                <a href="{{ url_for('tickets.index') }}" class="btn btn-ghost">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Right Column: Submission Guidelines -->
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Triage Guidelines</h2>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 0.75rem;">
+                <div>
+                    <strong style="color: #f87171;">Critical Priority:</strong> Reserved for production outages, data loss risks, or active cybersecurity breaches.
+                </div>
+                <div>
+                    <strong style="color: #fb923c;">High Priority:</strong> Severe performance degradation affecting multiple employees.
+                </div>
+                <div>
+                    <strong style="color: #38bdf8;">Medium Priority:</strong> Single user issues where work is partially blocked.
+                </div>
+                <div>
+                    <strong style="color: #cbd5e1;">Low Priority:</strong> Cosmetic glitches, standard hardware requests, or general inquiries.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
