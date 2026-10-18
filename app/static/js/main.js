@@ -45,3 +45,4 @@ function fillDemoCredentials(username, password) {
         userField.focus();
     }
 }
+

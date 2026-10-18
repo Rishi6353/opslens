@@ -21,6 +21,9 @@
                     <h1 style="font-size: 1.5rem; margin-top: 0.25rem;">{{ ticket.title }}</h1>
                 </div>
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <a href="{{ url_for('tickets.edit', ticket_id=ticket.id) }}" class="btn btn-ghost btn-sm" title="Edit ticket details">
+                        ✏️ Edit Ticket
+                    </a>
                     <span class="priority-badge priority-{{ ticket.priority }}">{{ ticket.priority }}</span>
                     <span class="status-badge status-{{ ticket.status }}">{{ ticket.status | replace('_', ' ') }}</span>
                 </div>
@@ -221,3 +224,4 @@
     </div>
 </div>
 {% endblock %}
+

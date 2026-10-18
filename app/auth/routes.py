@@ -162,3 +162,4 @@ def profile():
     ).fetchall()
 
     return render_template('auth/profile.html', user=g.user, activity=recent_activity)
+

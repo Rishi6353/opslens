@@ -60,3 +60,4 @@ def runner(app):
 def auth(client):
     """Authentication helper fixture."""
     return AuthActions(client)
+

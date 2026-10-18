@@ -4,10 +4,10 @@ from app.db import get_db
 
 
 def test_home_redirects_unauthenticated(client):
-    """Visiting / when unauthenticated redirects to /auth/login."""
+    """Visiting / redirects to /dashboard directly in Phase 2."""
     res = client.get('/', follow_redirects=False)
     assert res.status_code == 302
-    assert '/auth/login' in res.headers['Location']
+    assert '/dashboard' in res.headers['Location']
 
 
 def test_home_redirects_authenticated(client, auth):

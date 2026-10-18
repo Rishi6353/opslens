@@ -45,3 +45,4 @@ def roles_required(*allowed_roles):
             return view(**kwargs)
         return wrapped_view
     return decorator
+

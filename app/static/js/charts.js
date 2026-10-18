@@ -118,3 +118,4 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Failed to load chart analytics data:', error);
         });
 });
+

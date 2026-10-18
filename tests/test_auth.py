@@ -81,7 +81,7 @@ def test_open_redirect_defense(client, auth):
 
 
 def test_unauthenticated_redirect(client):
-    """Verify unauthenticated requests to protected endpoints redirect to login."""
-    response = client.get('/dashboard', follow_redirects=False)
+    """Verify unauthenticated requests to protected endpoints (e.g. /auth/profile) redirect to login."""
+    response = client.get('/auth/profile', follow_redirects=False)
     assert response.status_code == 302
     assert '/auth/login' in response.headers['Location']

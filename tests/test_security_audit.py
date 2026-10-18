@@ -109,3 +109,4 @@ def test_audit_log_telemetry(app, client, auth):
         actions = [log['action'] for log in logs]
         assert 'LOGIN_SUCCESS' in actions
         assert 'TICKET_CREATED' in actions
+

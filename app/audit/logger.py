@@ -33,3 +33,4 @@ def log_audit_event(action, target_type=None, target_id=None, details=None, user
     except Exception as e:
         # Avoid crashing app if audit log fails, but log to stderr/server logs
         print(f"[AUDIT LOG FAILURE] Error writing audit event: {e}")
+

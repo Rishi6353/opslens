@@ -130,3 +130,4 @@ def test_resolved_at_timestamp_lifecycle(app, client, auth):
         ticket = db.execute("SELECT status, resolved_at FROM tickets WHERE id = 1").fetchone()
         assert ticket['status'] == 'in_progress'
         assert ticket['resolved_at'] is None
+

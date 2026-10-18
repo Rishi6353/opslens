@@ -86,3 +86,4 @@ def test_agent_can_update_status_and_assignee(app, client, auth):
         assert ticket['status'] == 'in_progress'
         assert ticket['priority'] == 'critical'
         assert ticket['assignee_id'] == 2
+

@@ -83,3 +83,4 @@ def create_app(test_config=None):
         return render_template('errors/500.html', error=e), 500
 
     return app
+

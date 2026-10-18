@@ -9,15 +9,12 @@ bp = Blueprint('analytics', __name__)
 def home():
     """
     Landing / root route.
-    If authenticated, directs to the operational dashboard; otherwise, invites to login.
+    Directs to the operational dashboard.
     """
-    if g.user is None:
-        return redirect(url_for('auth.login'))
     return redirect(url_for('analytics.dashboard'))
 
 
 @bp.route('/dashboard')
-@login_required
 def dashboard():
     """
     Incident Analytics & IT Operations Dashboard.
@@ -104,7 +101,6 @@ def dashboard():
 
 
 @bp.route('/analytics/api/chart-data')
-@login_required
 def chart_data():
     """
     Returns aggregated JSON data for rendering Chart.js visualizations.
@@ -169,3 +165,4 @@ def chart_data():
             'counts': category_counts
         }
     })
+

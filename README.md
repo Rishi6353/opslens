@@ -302,3 +302,4 @@ As a Cyber Security student, here is how you can explain OpsLens during intervie
 - **Webhook Incident Integrations**: Automated incident notifications dispatched to Slack or Microsoft Teams webhook channels.
 - **Rate Limiting & Brute-Force Throttling**: Leaky bucket IP rate limiting on `/auth/login` using Redis.
 - **REST / OpenAPI Spec**: Exposing a versioned RESTful API (`/api/v1/tickets`) with Bearer token authentication for CI/CD integration.
+

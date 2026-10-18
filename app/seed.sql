@@ -56,3 +56,4 @@ INSERT INTO audit_logs (user_id, action, target_type, target_id, ip_address, det
 (5, 'TICKET_CREATED', 'ticket', 2, '192.168.1.88', 'Created critical ticket: Suspicious phishing email', '2026-10-15 11:05:00'),
 (3, 'TICKET_STATUS_CHANGED', 'ticket', 4, '192.168.1.22', 'Changed status from open to resolved', '2026-10-16 16:30:00'),
 (1, 'USER_ROLE_UPDATED', 'user', 2, '127.0.0.1', 'Verified permissions for Sarah Support', '2026-10-17 08:00:00');
+

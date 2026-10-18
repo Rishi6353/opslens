@@ -48,3 +48,4 @@ def test_mttr_edge_case_zero_resolved(app, client, auth):
     response = client.get('/dashboard')
     assert response.status_code == 200
     assert b"0.0" in response.data
+

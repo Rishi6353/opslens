@@ -33,3 +33,4 @@ def validate_csrf():
                 user_id=user_id
             )
             abort(403, description="CSRF token validation failed. Possible Cross-Site Request Forgery detected.")
+
