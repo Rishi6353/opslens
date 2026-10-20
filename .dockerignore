@@ -1,0 +1,47 @@
+# Git metadata
+.git/
+.gitignore
+
+# Python virtual environments & packages
+.venv/
+env/
+venv/
+ENV/
+
+# Python bytecode & caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Sensitive credentials & environment files
+.env
+.env.*
+!.env.example
+
+# Local SQLite databases and persistent instance directory
+instance/
+*.db
+*.sqlite3
+
+# Test suite, test reports, and coverage
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+pytest.ini
+
+# IDE and OS artifacts
+.vscode/
+.idea/
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Documentation & temporary logs
+docs/
+*.log
+*.tar.gz
+*.bak
+*.dump
+

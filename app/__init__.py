@@ -19,7 +19,7 @@ def create_app(test_config=None):
     # Default configuration
     app.config.from_mapping(
         SECRET_KEY=os.environ.get('SECRET_KEY', 'dev-secret-fallback-key-do-not-use-in-prod'),
-        DATABASE=os.path.join(app.instance_path, 'opslens.db'),
+        DATABASE=os.environ.get('DATABASE_PATH') or os.environ.get('DATABASE') or os.path.join(app.instance_path, 'opslens.db'),
         PERMANENT_SESSION_LIFETIME=timedelta(hours=2),  # 2-hour session expiration
         SESSION_COOKIE_HTTPONLY=True,    # Mitigate XSS stealing session cookies
         SESSION_COOKIE_SAMESITE='Lax',   # Mitigate CSRF on top-level navigations
@@ -32,7 +32,13 @@ def create_app(test_config=None):
         # Load the test config if passed in
         app.config.from_mapping(test_config)
 
-    # Security check: warn if default insecure secret is used in development/production
+    # Security check: fail-closed if production has missing/insecure secret key
+    is_prod = os.environ.get('FLASK_ENV') == 'production' or os.environ.get('ENVIRONMENT') == 'production'
+    secret_key = app.config.get('SECRET_KEY')
+    if is_prod and (not secret_key or secret_key == 'dev-secret-fallback-key-do-not-use-in-prod' or len(secret_key) < 32):
+        raise RuntimeError("Insecure configuration: SECRET_KEY must be set to a strong value (at least 32 characters) in production environment.")
+
+    # Security check: warn if default insecure secret is used in development/testing
     if app.config['SECRET_KEY'] == 'dev-secret-fallback-key-do-not-use-in-prod' and not app.config.get('TESTING'):
         warnings.warn("Security Alert: Using fallback SECRET_KEY. Configure a strong secret key in .env.")
 
@@ -78,6 +84,16 @@ def create_app(test_config=None):
 
     from app.analytics.routes import bp as analytics_bp
     app.register_blueprint(analytics_bp)
+
+    # Minimal, information-leak-free health check probe endpoint
+    @app.route('/health')
+    def health():
+        try:
+            database = db.get_db()
+            database.execute("SELECT 1").fetchone()
+            return {"status": "healthy", "database": "connected"}, 200
+        except Exception:
+            return {"status": "unhealthy", "database": "disconnected"}, 503
 
     # Register error handlers
     @app.errorhandler(403)

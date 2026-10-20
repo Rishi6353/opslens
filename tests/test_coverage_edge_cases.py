@@ -106,3 +106,53 @@ def test_cli_init_and_seed_commands(runner):
 
     seed_res = runner.invoke(args=['seed-db'])
     assert 'Populated database with realistic seed data.' in seed_res.output
+
+
+def test_health_check_healthy(client):
+    """GET /health probe returns 200 and json status without leaking info."""
+    res = client.get('/health')
+    assert res.status_code == 200
+    assert res.is_json
+    assert res.get_json() == {"status": "healthy", "database": "connected"}
+    assert b"Traceback" not in res.data
+    assert b"SECRET_KEY" not in res.data
+
+
+def test_health_check_unhealthy(client, monkeypatch):
+    """GET /health probe returns 503 when database fails without leaking tracebacks."""
+    from app import db
+    def broken_db():
+        raise RuntimeError("Database connection timed out or disk error")
+
+    monkeypatch.setattr(db, 'get_db', broken_db)
+    res = client.get('/health')
+    assert res.status_code == 503
+    assert res.is_json
+    assert res.get_json() == {"status": "unhealthy", "database": "disconnected"}
+    # Leak prevention checks
+    assert b"Traceback" not in res.data
+    assert b"Database connection timed out" not in res.data
+
+
+def test_production_secret_key_guard(monkeypatch):
+    """Production mode must raise RuntimeError if SECRET_KEY is default or weak."""
+    from app import create_app
+
+    monkeypatch.setenv('FLASK_ENV', 'production')
+    monkeypatch.delenv('SECRET_KEY', raising=False)
+
+    # Insecure fallback secret in production
+    with pytest.raises(RuntimeError, match="Insecure configuration"):
+        create_app({'SECRET_KEY': 'dev-secret-fallback-key-do-not-use-in-prod'})
+
+    # Short secret (<32 chars) in production
+    with pytest.raises(RuntimeError, match="Insecure configuration"):
+        create_app({'SECRET_KEY': 'too-short-secret'})
+
+    # Strong secret in production succeeds
+    app = create_app({
+        'SECRET_KEY': 'a' * 32,
+        'TESTING': True
+    })
+    assert app is not None
+

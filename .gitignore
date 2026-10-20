@@ -18,6 +18,10 @@ ENV/
 instance/
 *.db
 *.sqlite3
+*.log
+*.tar.gz
+*.bak
+*.dump
 
 # macOS system files
 .DS_Store

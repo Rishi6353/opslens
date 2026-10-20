@@ -1,0 +1,29 @@
+services:
+  opslens:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: opslens:latest
+    container_name: opslens-app
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    environment:
+      - FLASK_ENV=production
+      - PORT=5001
+      # Enforce secure SECRET_KEY injection from environment or .env file
+      - SECRET_KEY=${SECRET_KEY:?Error: SECRET_KEY must be set in your environment or .env file}
+    volumes:
+      # Persistent named volume for the SQLite database instance directory
+      - opslens_data:/app/instance
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request, sys; sys.exit(0 if urllib.request.urlopen('http://localhost:5001/health').getcode() == 200 else 1)\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  opslens_data:
+    name: opslens_data
+
