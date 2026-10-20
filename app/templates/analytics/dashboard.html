@@ -3,42 +3,44 @@
 {% block title %}Incident Analytics Dashboard{% endblock %}
 
 {% block content %}
-<!-- Top Header & Actions -->
+<!-- Top Header & Primary Command Actions -->
 <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
     <div>
-        <h1 style="font-size: 1.85rem; margin-bottom: 0.35rem;">IT Operations &amp; Incident Analytics</h1>
-        <p style="color: var(--text-secondary); font-size: 0.95rem;">
+        <h1 style="font-size: 1.75rem; margin-bottom: 0.25rem;">IT Operations &amp; Incident Analytics</h1>
+        <p style="color: var(--text-secondary); font-size: 0.9375rem;">
             Real-time incident metrics, MTTR performance tracking, and security audit telemetry.
         </p>
     </div>
-    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-        <a href="{{ url_for('tickets.create') }}" class="btn btn-primary btn-sm">
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+        <a href="{{ url_for('tickets.create') }}" class="btn btn-primary btn-sm" title="Raise a new incident ticket">
             + Raise Ticket
         </a>
-        <a href="{{ url_for('tickets.index') }}" class="btn btn-secondary btn-sm">
+        <a href="{{ url_for('tickets.index') }}" class="btn btn-secondary btn-sm" title="View all incident tickets in queue">
             View All Tickets &rarr;
         </a>
         {% if g.user %}
         <a href="{{ url_for('tickets.export_csv', range=date_filter.preset, start_date=date_filter.start_date, end_date=date_filter.end_date) }}"
-           class="btn btn-ghost btn-sm" title="Export tickets matching current filters to CSV">
-            📥 Export Tickets CSV
+           class="btn btn-ghost btn-sm" title="Export incident tickets matching current window to CSV">
+            <span aria-hidden="true">📥</span> Export Tickets CSV
         </a>
         <a href="{{ url_for('analytics.export_analytics_summary', range=date_filter.preset, start_date=date_filter.start_date, end_date=date_filter.end_date) }}"
-           class="btn btn-ghost btn-sm" title="Export high-level metrics summary to CSV">
-            📊 Export Summary CSV
+           class="btn btn-ghost btn-sm" title="Export executive metrics summary to CSV">
+            <span aria-hidden="true">📊</span> Export Summary CSV
         </a>
         {% endif %}
     </div>
 </div>
 
-<!-- Date Filter Toolbar Card -->
-<div class="card" style="margin-bottom: 2rem; padding: 1.25rem;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
+<!-- Date Range Analytics Window Filter Card -->
+<section class="card" style="margin-bottom: 1.75rem; padding: 1.25rem;" aria-label="Analytics date range filter">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
         <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">📅 Analytics Window:</span>
-            <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8;">
+            <span style="font-size: 0.8125rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em;">
+                <span aria-hidden="true">📅</span> Analytics Window:
+            </span>
+            <span class="badge" style="background-color: var(--primary-light); color: var(--status-open); border-color: var(--primary-border); font-family: var(--font-mono); font-size: 0.75rem;">
                 {% if date_filter.preset == 'all' %}
-                    All Time
+                    All Time (Cumulative)
                 {% elif date_filter.preset == '7d' %}
                     Last 7 Days ({{ date_filter.start_date }} to {{ date_filter.end_date }})
                 {% elif date_filter.preset == '30d' %}
@@ -46,227 +48,287 @@
                 {% elif date_filter.preset == '90d' %}
                     Last 90 Days ({{ date_filter.start_date }} to {{ date_filter.end_date }})
                 {% elif date_filter.preset == 'custom' %}
-                    Custom: {{ date_filter.start_date }} to {{ date_filter.end_date }} (Inclusive)
+                    Custom Range: {{ date_filter.start_date }} to {{ date_filter.end_date }}
                 {% endif %}
             </span>
         </div>
         <div style="font-size: 0.75rem; color: var(--text-muted);">
-            End dates are fully inclusive throughout selected day (&lt; next day 00:00:00)
+            Inclusive query window (records up to 23:59:59 of selected end date)
         </div>
     </div>
 
-    <form method="GET" action="{{ url_for('analytics.dashboard') }}" style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+    <form method="GET" action="{{ url_for('analytics.dashboard') }}" style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;" role="search" aria-label="Filter analytics by date">
+        <!-- Preset Quick Filter Buttons -->
         <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
             <a href="{{ url_for('analytics.dashboard', range='all') }}"
-               class="btn btn-sm {% if date_filter.preset == 'all' %}btn-primary{% else %}btn-secondary{% endif %}">
+               class="btn btn-sm {% if date_filter.preset == 'all' %}btn-primary{% else %}btn-secondary{% endif %}"
+               title="View all-time cumulative metrics">
                 All Time
             </a>
             <a href="{{ url_for('analytics.dashboard', range='7d') }}"
-               class="btn btn-sm {% if date_filter.preset == '7d' %}btn-primary{% else %}btn-secondary{% endif %}">
+               class="btn btn-sm {% if date_filter.preset == '7d' %}btn-primary{% else %}btn-secondary{% endif %}"
+               title="Filter to last 7 days">
                 7 Days
             </a>
             <a href="{{ url_for('analytics.dashboard', range='30d') }}"
-               class="btn btn-sm {% if date_filter.preset == '30d' %}btn-primary{% else %}btn-secondary{% endif %}">
+               class="btn btn-sm {% if date_filter.preset == '30d' %}btn-primary{% else %}btn-secondary{% endif %}"
+               title="Filter to last 30 days">
                 30 Days
             </a>
             <a href="{{ url_for('analytics.dashboard', range='90d') }}"
-               class="btn btn-sm {% if date_filter.preset == '90d' %}btn-primary{% else %}btn-secondary{% endif %}">
+               class="btn btn-sm {% if date_filter.preset == '90d' %}btn-primary{% else %}btn-secondary{% endif %}"
+               title="Filter to last 90 days">
                 90 Days
             </a>
         </div>
 
+        <!-- Custom Date Range Controls -->
         <div style="display: flex; align-items: center; gap: 0.5rem; margin-left: auto; flex-wrap: wrap;">
             <input type="hidden" name="range" value="custom">
             <div style="display: flex; align-items: center; gap: 0.35rem;">
-                <label for="start_date" style="font-size: 0.75rem; color: var(--text-secondary);">From:</label>
-                <input type="date" name="start_date" id="start_date" value="{{ date_filter.start_date }}"
-                       class="form-control" style="font-size: 0.8rem; padding: 0.25rem 0.5rem; width: 140px;">
+                <label for="start_date" style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500;">From:</label>
+                <input type="date"
+                       name="start_date"
+                       id="start_date"
+                       value="{{ date_filter.start_date }}"
+                       class="form-control"
+                       style="font-size: 0.8125rem; min-height: 32px; padding: 0.25rem 0.5rem; width: 140px;"
+                       aria-label="Filter start date">
             </div>
             <div style="display: flex; align-items: center; gap: 0.35rem;">
-                <label for="end_date" style="font-size: 0.75rem; color: var(--text-secondary);">To:</label>
-                <input type="date" name="end_date" id="end_date" value="{{ date_filter.end_date }}"
-                       class="form-control" style="font-size: 0.8rem; padding: 0.25rem 0.5rem; width: 140px;">
+                <label for="end_date" style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500;">To:</label>
+                <input type="date"
+                       name="end_date"
+                       id="end_date"
+                       value="{{ date_filter.end_date }}"
+                       class="form-control"
+                       style="font-size: 0.8125rem; min-height: 32px; padding: 0.25rem 0.5rem; width: 140px;"
+                       aria-label="Filter end date">
             </div>
-            <button type="submit" class="btn btn-secondary btn-sm">
+            <button type="submit" class="btn btn-secondary btn-sm" title="Apply custom date range">
                 Apply Custom Range
             </button>
         </div>
     </form>
-</div>
+</section>
 
-<!-- 1. KPI Metric Cards Grid -->
-<div class="kpi-grid">
-    <div class="kpi-card kpi-primary">
-        <span class="kpi-label">Total Incidents</span>
-        <span class="kpi-value">{{ total_tickets }}</span>
-        <span class="kpi-subtext">Cumulative queue</span>
+<!-- 1. KPI Metric Cards Grid: Tier 1 (Queue Lifecycle) & Tier 2 (Operational Velocity) -->
+<section aria-label="Incident Key Performance Indicators">
+    <!-- Tier 1: Incident Volume & Lifecycle Queue -->
+    <div class="kpi-grid" style="margin-bottom: 1rem;">
+        <div class="kpi-card kpi-primary">
+            <span class="kpi-label">Total Incidents</span>
+            <span class="kpi-value">{{ total_tickets }}</span>
+            <span class="kpi-subtext">Cumulative queue</span>
+        </div>
+
+        <div class="kpi-card kpi-warning">
+            <span class="kpi-label">Open / Unresolved</span>
+            <span class="kpi-value">{{ open_tickets }}</span>
+            <span class="kpi-subtext">Awaiting initial triage</span>
+        </div>
+
+        <div class="kpi-card kpi-info">
+            <span class="kpi-label">In Progress</span>
+            <span class="kpi-value">{{ in_progress }}</span>
+            <span class="kpi-subtext">Active investigations</span>
+        </div>
+
+        <div class="kpi-card kpi-success">
+            <span class="kpi-label">Resolved / Closed</span>
+            <span class="kpi-value">{{ resolved_tickets }}</span>
+            <span class="kpi-subtext">Successfully addressed</span>
+        </div>
     </div>
 
-    <div class="kpi-card kpi-warning">
-        <span class="kpi-label">Open / Unresolved</span>
-        <span class="kpi-value">{{ open_tickets }}</span>
-        <span class="kpi-subtext">Awaiting initial triage</span>
-    </div>
+    <!-- Tier 2: Resolution Velocity & SLA Performance -->
+    <div class="kpi-grid" style="margin-bottom: 2rem;">
+        <div class="kpi-card kpi-danger">
+            <span class="kpi-label">Active Critical</span>
+            <span class="kpi-value">{{ critical_tickets }}</span>
+            <span class="kpi-subtext">High-severity alerts</span>
+        </div>
 
-    <div class="kpi-card kpi-info">
-        <span class="kpi-label">In Progress</span>
-        <span class="kpi-value">{{ in_progress }}</span>
-        <span class="kpi-subtext">Active investigations</span>
-    </div>
+        <div class="kpi-card kpi-primary">
+            <span class="kpi-label">Average MTTR</span>
+            <span class="kpi-value">{{ avg_mttr_hours }} <span style="font-size: 0.95rem; color: var(--text-muted); font-weight: 500;">hrs</span></span>
+            <span class="kpi-subtext">Mean time to resolution</span>
+        </div>
 
-    <div class="kpi-card kpi-success">
-        <span class="kpi-label">Resolved / Closed</span>
-        <span class="kpi-value">{{ resolved_tickets }}</span>
-        <span class="kpi-subtext">Successfully addressed</span>
-    </div>
+        <div class="kpi-card kpi-info">
+            <span class="kpi-label">Median MTTR</span>
+            <span class="kpi-value">{{ median_mttr_hours }} <span style="font-size: 0.95rem; color: var(--text-muted); font-weight: 500;">hrs</span></span>
+            <span class="kpi-subtext">Median resolution time</span>
+        </div>
 
-    <div class="kpi-card kpi-danger">
-        <span class="kpi-label">Active Critical</span>
-        <span class="kpi-value">{{ critical_tickets }}</span>
-        <span class="kpi-subtext">High-severity alerts</span>
+        <div class="kpi-card kpi-danger">
+            <span class="kpi-label">Currently Overdue</span>
+            <span class="kpi-value">{{ currently_overdue_tickets }}</span>
+            <span class="kpi-subtext" title="Configurable demo SLAs: Critical 24h, High 48h, Medium 72h, Low 120h">
+                Live SLA breaches
+            </span>
+        </div>
     </div>
-
-    <div class="kpi-card kpi-primary">
-        <span class="kpi-label">Average MTTR</span>
-        <span class="kpi-value">{{ avg_mttr_hours }} <span style="font-size: 1rem; color: var(--text-muted);">hrs</span></span>
-        <span class="kpi-subtext">Mean time to resolution</span>
-    </div>
-
-    <div class="kpi-card kpi-info">
-        <span class="kpi-label">Median MTTR</span>
-        <span class="kpi-value">{{ median_mttr_hours }} <span style="font-size: 1rem; color: var(--text-muted);">hrs</span></span>
-        <span class="kpi-subtext">Median resolution time</span>
-    </div>
-
-    <div class="kpi-card kpi-danger">
-        <span class="kpi-label">Currently Overdue</span>
-        <span class="kpi-value">{{ currently_overdue_tickets }}</span>
-        <span class="kpi-subtext" title="Demo SLA defaults: Crit 24h, High 48h, Med 72h, Low 120h">
-            Live SLA breaches
-        </span>
-    </div>
-</div>
+</section>
 
 <!-- 2. Chart.js Analytics Grid -->
-<div class="charts-grid">
+<section class="charts-grid" aria-label="Visual analytics charts">
     <!-- Full-width Volume Trend Line Chart -->
     <div class="chart-card" style="grid-column: 1 / -1;">
         <div class="card-header">
             <div>
                 <h2 class="card-title">Incident Volume Trends Over Time</h2>
-                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
+                <p style="font-size: 0.8125rem; color: var(--text-muted); margin-top: 2px;">
                     Daily incoming incident ticket frequency across the selected analytics window.
                 </p>
             </div>
-            <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8;">Time Series</span>
+            <span class="badge" style="background-color: var(--primary-light); color: var(--status-open); border-color: var(--primary-border);">
+                Time Series
+            </span>
         </div>
-        <div class="chart-container" style="height: 220px;">
-            <canvas id="volumeChart"></canvas>
+        <div class="chart-container" style="height: 230px;">
+            <canvas id="volumeChart" role="img" aria-label="Line chart showing daily incident volume over time"></canvas>
         </div>
     </div>
 
-    <!-- Status Breakdown -->
+    <!-- Status Breakdown (Doughnut Chart) -->
     <div class="chart-card">
         <div class="card-header">
-            <h2 class="card-title">Incident Status Breakdown</h2>
-            <span class="badge" style="background: rgba(59,130,246,0.1); color: var(--primary);">Real-time</span>
+            <div>
+                <h2 class="card-title">Incident Status Breakdown</h2>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+                    Proportion of tickets across lifecycle states.
+                </p>
+            </div>
+            <span class="badge" style="background-color: rgba(56, 189, 248, 0.1); color: var(--status-open); border-color: rgba(56, 189, 248, 0.3);">
+                Lifecycle
+            </span>
         </div>
-        <div class="chart-container">
-            <canvas id="statusChart"></canvas>
+        <div class="chart-container" style="height: 250px;">
+            <canvas id="statusChart" role="img" aria-label="Doughnut chart illustrating ticket status proportions"></canvas>
         </div>
     </div>
 
-    <!-- Priority Breakdown -->
+    <!-- Priority Breakdown (Bar Chart) -->
     <div class="chart-card">
         <div class="card-header">
-            <h2 class="card-title">Incidents by Priority</h2>
-            <span class="badge" style="background: rgba(239,68,68,0.1); color: #f87171;">Severity</span>
+            <div>
+                <h2 class="card-title">Incidents by Priority</h2>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+                    Distribution across severity tiers.
+                </p>
+            </div>
+            <span class="badge" style="background-color: rgba(239, 68, 68, 0.1); color: #f87171; border-color: rgba(239, 68, 68, 0.3);">
+                Severity
+            </span>
         </div>
-        <div class="chart-container">
-            <canvas id="priorityChart"></canvas>
+        <div class="chart-container" style="height: 250px;">
+            <canvas id="priorityChart" role="img" aria-label="Bar chart showing ticket distribution by priority level"></canvas>
         </div>
     </div>
 
-    <!-- Category Distribution -->
+    <!-- Category Classification (Horizontal Bar Chart) -->
     <div class="chart-card" style="grid-column: 1 / -1;">
         <div class="card-header">
-            <h2 class="card-title">Incidents by Category Classification</h2>
-            <span class="badge" style="background: rgba(99,102,241,0.1); color: #818cf8;">Classification</span>
+            <div>
+                <h2 class="card-title">Incidents by Category Classification</h2>
+                <p style="font-size: 0.8125rem; color: var(--text-muted); margin-top: 2px;">
+                    Incident frequency grouped by operational domain and IT service catalog.
+                </p>
+            </div>
+            <span class="badge" style="background-color: rgba(99, 102, 241, 0.12); color: #818cf8; border-color: rgba(99, 102, 241, 0.35);">
+                Classification
+            </span>
         </div>
-        <div class="chart-container" style="height: 200px;">
-            <canvas id="categoryChart"></canvas>
+        <div class="chart-container" style="height: 210px;">
+            <canvas id="categoryChart" role="img" aria-label="Horizontal bar chart showing incident distribution across categories"></canvas>
         </div>
     </div>
-</div>
+</section>
 
 <!-- 3. Smart Recurring Issues & Pattern Detection -->
-<div class="card" style="margin-bottom: 2rem;">
+<section class="card" style="margin-bottom: 2rem;" aria-label="Recurring incident clusters">
     <div class="card-header">
         <div>
             <h2 class="card-title">Recurring Incident Clusters &amp; Root Cause Patterns</h2>
-            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
+            <p style="font-size: 0.8125rem; color: var(--text-muted); margin-top: 2px;">
                 Identified through automated semantic grouping of incident titles and operational categories.
             </p>
         </div>
-        <span class="badge" style="background-color: rgba(245, 158, 11, 0.15); color: #f59e0b;">Pattern Telemetry</span>
+        <span class="badge" style="background-color: var(--warning-light); color: var(--warning); border-color: var(--warning-border);">
+            Pattern Telemetry
+        </span>
     </div>
 
     <div class="table-responsive">
-        <table class="table">
+        <table class="table" aria-label="Recurring Incident Clusters Table">
             <thead>
                 <tr>
-                    <th>Incident Cluster Name</th>
-                    <th>Category</th>
-                    <th>Severity Rating</th>
-                    <th style="width: 130px; text-align: center;">Incidents</th>
-                    <th style="text-align: right;">Action Recommended</th>
+                    <th scope="col">Incident Cluster Name</th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Severity Rating</th>
+                    <th scope="col" style="width: 130px; text-align: center;">Incidents</th>
+                    <th scope="col" style="text-align: right;">Action Recommended</th>
                 </tr>
             </thead>
             <tbody>
                 {% for pat in recurring_patterns %}
                 <tr>
                     <td style="font-weight: 600; color: var(--text-primary);">
-                        🔄 {{ pat.issue_name }}
+                        <span aria-hidden="true">🔄</span> {{ pat.issue_name }}
                     </td>
-                    <td>📂 {{ pat.category }}</td>
+                    <td>
+                        <span aria-hidden="true">📂</span> {{ pat.category }}
+                    </td>
                     <td>
                         <span class="priority-badge priority-{{ pat.severity|lower }}">{{ pat.severity }}</span>
                     </td>
                     <td style="text-align: center;">
-                        <span style="font-weight: 700; font-family: var(--font-mono); font-size: 1.1rem; color: var(--primary);">
+                        <span style="font-weight: 700; font-family: var(--font-mono); font-size: 1.1rem; color: var(--status-open);">
                             {{ pat.incident_count }}
                         </span>
                     </td>
-                    <td style="text-align: right; font-size: 0.85rem; color: var(--text-secondary);">
+                    <td style="text-align: right; font-size: 0.8125rem;">
                         {% if pat.incident_count > 2 %}
-                        <span style="color: #f87171; font-weight: 500;">Problem Investigation Needed</span>
+                        <span class="badge" style="background-color: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239, 68, 68, 0.35);">
+                            Problem Investigation Needed
+                        </span>
                         {% else %}
-                        <span>Standard Monitoring</span>
+                        <span style="color: var(--text-muted);">Standard Monitoring</span>
                         {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 2rem 1rem; color: var(--text-muted);">
+                        No recurring incident clusters detected for the selected analytics window.
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
-</div>
+</section>
 
 <!-- 4. Lower Grid: Recent Incidents & Security Audit Trail -->
 <div class="detail-grid">
     <!-- Left: Recent Incidents -->
-    <div class="card">
+    <section class="card" aria-label="Recent incident queue">
         <div class="card-header">
-            <h2 class="card-title">Recent Incident Queue</h2>
-            <a href="{{ url_for('tickets.index') }}" style="font-size: 0.85rem;">View full queue &rarr;</a>
+            <div>
+                <h2 class="card-title">Recent Incident Queue</h2>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">Most recent tickets raised</p>
+            </div>
+            <a href="{{ url_for('tickets.index') }}" style="font-size: 0.8125rem; text-decoration: none;">View full queue &rarr;</a>
         </div>
         <div class="table-responsive">
-            <table class="table">
+            <table class="table" aria-label="Recent Tickets Table">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Title</th>
-                        <th>Status</th>
-                        <th>Created</th>
+                        <th scope="col" style="width: 70px;">ID</th>
+                        <th scope="col">Title</th>
+                        <th scope="col" style="width: 120px;">Status</th>
+                        <th scope="col" style="width: 130px;">Created</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -281,24 +343,27 @@
                         <td>
                             <span class="status-badge status-{{ t.status }}">{{ t.status | replace('_', ' ') }}</span>
                         </td>
-                        <td class="table-code" style="font-size: 0.75rem;">
+                        <td class="table-code" style="font-size: 0.75rem; white-space: nowrap;">
                             {{ t.created_at[:16] }}
                         </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No recent tickets.</td></tr>
+                    <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 1.5rem 0;">No recent tickets.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-    </div>
+    </section>
 
     <!-- Right: Enterprise Security Audit Log (Restricted to Administrators) -->
     {% if g.user and g.user.role_name == 'admin' %}
-    <div class="card">
+    <section class="card" aria-label="Security and audit telemetry">
         <div class="card-header">
-            <h2 class="card-title">Security &amp; Audit Telemetry</h2>
-            <a href="{{ url_for('admin.audit_logs') }}" style="font-size: 0.85rem; color: #34d399;">
+            <div>
+                <h2 class="card-title">Security &amp; Audit Telemetry</h2>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">Administrator event trail</p>
+            </div>
+            <a href="{{ url_for('admin.audit_logs') }}" style="font-size: 0.8125rem; color: #34d399; text-decoration: none;">
                 Full Audit Explorer &rarr;
             </a>
         </div>
@@ -309,39 +374,44 @@
                     <span class="audit-action">{{ log.action }}</span>
                     <span class="table-code" style="font-size: 0.7rem;">{{ log.created_at[:16] }}</span>
                 </div>
-                <div style="color: var(--text-secondary); font-size: 0.8rem;">
+                <div style="color: var(--text-secondary); font-size: 0.8125rem; line-height: 1.4;">
                     {{ log.details }}
                 </div>
-                <div class="table-code" style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; display: flex; justify-content: space-between;">
+                <div class="table-code" style="font-size: 0.7rem; color: var(--text-muted); margin-top: 3px; display: flex; justify-content: space-between;">
                     <span>Actor: <strong>{{ log.username or 'System' }}</strong></span>
                     <span>IP: {{ log.ip_address }}</span>
                 </div>
             </div>
             {% else %}
-            <p style="color: var(--text-muted); font-size: 0.85rem;">No audit logs available.</p>
+            <p style="color: var(--text-muted); font-size: 0.8125rem; text-align: center; padding: 1.5rem 0;">No audit logs available.</p>
             {% endfor %}
         </div>
-    </div>
+    </section>
     {% else %}
     <!-- Helpdesk Information Card for Non-Admins -->
-    <div class="card">
+    <section class="card" aria-label="Incident SLA thresholds">
         <div class="card-header">
-            <h2 class="card-title">OpsLens Incident SLAs</h2>
-            <span class="badge" style="background: rgba(59,130,246,0.1); color: var(--primary);">Demo Thresholds</span>
+            <div>
+                <h2 class="card-title">OpsLens Incident SLAs</h2>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">Standard operational targets</p>
+            </div>
+            <span class="badge" style="background-color: var(--primary-light); color: var(--status-open); border-color: var(--primary-border);">
+                Demo Thresholds
+            </span>
         </div>
-        <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.85rem; color: var(--text-secondary);">
-            <p>Configurable demo service-level agreements applied across the platform:</p>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.8125rem; color: var(--text-secondary);">
+            <p style="margin: 0;">Configurable demo service-level agreements applied across the platform:</p>
             <ul style="padding-left: 1.25rem; margin: 0; line-height: 1.6;">
                 <li><strong style="color: #f87171;">Critical:</strong> {{ sla_thresholds.critical }} hours resolution target</li>
                 <li><strong style="color: #fb923c;">High:</strong> {{ sla_thresholds.high }} hours resolution target</li>
                 <li><strong style="color: #38bdf8;">Medium:</strong> {{ sla_thresholds.medium }} hours resolution target</li>
                 <li><strong style="color: #cbd5e1;">Low:</strong> {{ sla_thresholds.low }} hours resolution target</li>
             </ul>
-            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; line-height: 1.4;">
                 Incident SLA alerts trigger when unresolved tickets exceed their respective priority threshold.
             </p>
         </div>
-    </div>
+    </section>
     {% endif %}
 </div>
 {% endblock %}

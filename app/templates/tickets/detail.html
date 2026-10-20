@@ -3,60 +3,101 @@
 {% block title %}Ticket #{{ ticket.id }} &mdash; {{ ticket.title }}{% endblock %}
 
 {% block content %}
-<!-- Breadcrumb / Back link -->
-<div style="margin-bottom: 1.25rem;">
-    <a href="{{ url_for('tickets.index') }}" style="color: var(--text-secondary); font-size: 0.9rem;">
-        &larr; Back to all tickets
+<!-- Breadcrumb & Quick Actions Bar -->
+<div style="margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+    <a href="{{ url_for('tickets.index') }}" style="color: var(--text-secondary); font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.4rem; text-decoration: none;">
+        <span aria-hidden="true">&larr;</span> Back to all tickets
     </a>
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <a href="{{ url_for('tickets.edit', ticket_id=ticket.id) }}" class="btn btn-ghost btn-sm" title="Edit incident classification, priority, or description">
+            <span aria-hidden="true">✏️</span> Edit Ticket
+        </a>
+    </div>
 </div>
 
 <div class="detail-grid">
     <!-- Left Column: Incident Content & Conversation Timeline -->
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
         <!-- Ticket Overview Card -->
-        <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
-                <div>
-                    <span class="table-code" style="font-size: 0.9rem; color: var(--primary);">Ticket #{{ ticket.id }}</span>
-                    <h1 style="font-size: 1.5rem; margin-top: 0.25rem;">{{ ticket.title }}</h1>
+        <article class="card" aria-labelledby="ticket-title-heading">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+                <div style="flex: 1; min-width: 260px;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
+                        <span class="table-code" style="font-size: 0.85rem; font-weight: 600; color: var(--status-open); background-color: var(--primary-light); padding: 2px 8px; border-radius: var(--radius-xs); border: 1px solid var(--primary-border);">
+                            Ticket #{{ ticket.id }}
+                        </span>
+                        <span class="badge" style="background-color: rgba(255, 255, 255, 0.05); color: var(--text-secondary); border-color: var(--border-color);">
+                            <span aria-hidden="true">📂</span> {{ ticket.category_name }}
+                        </span>
+                    </div>
+                    <h1 id="ticket-title-heading" style="font-size: 1.5rem; font-weight: 700; line-height: 1.3; margin-top: 0.25rem; color: var(--text-primary);">
+                        {{ ticket.title }}
+                    </h1>
                 </div>
-                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                    <a href="{{ url_for('tickets.edit', ticket_id=ticket.id) }}" class="btn btn-ghost btn-sm" title="Edit ticket details">
-                        ✏️ Edit Ticket
-                    </a>
+                <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
                     <span class="priority-badge priority-{{ ticket.priority }}">{{ ticket.priority }}</span>
                     <span class="status-badge status-{{ ticket.status }}">{{ ticket.status | replace('_', ' ') }}</span>
                 </div>
             </div>
 
-            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem; display: flex; gap: 1rem; flex-wrap: wrap;">
-                <span>📂 Category: <strong>{{ ticket.category_name }}</strong></span>
-                <span>📅 Reported: <span class="table-code">{{ ticket.created_at }}</span></span>
+            <!-- Incident Metadata Bar -->
+            <div style="font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 1.25rem; padding-bottom: 0.85rem; border-bottom: 1px solid rgba(255, 255, 255, 0.06); display: flex; gap: 1.25rem; flex-wrap: wrap; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 0.35rem;">
+                    <span aria-hidden="true">👤</span>
+                    <span>Reported by: <strong style="color: var(--text-primary);">{{ ticket.requester_name }}</strong></span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.35rem;">
+                    <span aria-hidden="true">📅</span>
+                    <span>Reported: <span class="table-code">{{ ticket.created_at }}</span></span>
+                </div>
+                {% if ticket.resolved_at %}
+                <div style="display: flex; align-items: center; gap: 0.35rem;">
+                    <span aria-hidden="true">✓</span>
+                    <span>Resolved: <span class="table-code" style="color: var(--status-resolved);">{{ ticket.resolved_at }}</span></span>
+                </div>
+                {% endif %}
             </div>
 
             <!-- Description Body -->
-            <div style="background-color: var(--bg-main); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1.25rem; font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap; color: #f1f5f9;">{{ ticket.description }}</div>
-        </div>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <span class="form-label" style="text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; color: var(--text-secondary);">
+                    Incident Description &amp; Context
+                </span>
+                <div style="background-color: var(--bg-canvas); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1.25rem; font-size: 0.9375rem; line-height: 1.65; white-space: pre-wrap; color: #f1f5f9; word-break: break-word;">{{ ticket.description }}</div>
+            </div>
+        </article>
 
         <!-- Discussion Timeline & Internal Notes -->
-        <div class="card">
+        <section class="card" aria-label="Incident discussion notes and timeline">
             <div class="card-header">
-                <h2 class="card-title">Discussion &amp; Work Notes</h2>
-                <span class="badge" style="background: rgba(255,255,255,0.05); color: var(--text-secondary);">
+                <div>
+                    <h2 class="card-title">Discussion &amp; Work Notes</h2>
+                    <p style="font-size: 0.8125rem; color: var(--text-muted); margin-top: 2px;">
+                        Chronological record of specialist communications and investigation milestones.
+                    </p>
+                </div>
+                <span class="badge" style="background-color: rgba(255, 255, 255, 0.06); color: var(--text-secondary); border-color: var(--border-color); font-family: var(--font-mono);">
                     {{ comments|length }} Note(s)
                 </span>
             </div>
 
-            <div class="comments-list">
+            <!-- Vertical Incident Conversation Timeline -->
+            <div class="comments-list" style="border-left: 2px solid var(--border-subtle); padding-left: 1.25rem; margin-left: 0.5rem; margin-top: 0.5rem; margin-bottom: 2rem;">
                 {% for c in comments %}
-                <div class="comment-card {% if c.is_internal %}internal-note{% endif %}">
+                <div class="comment-card {% if c.is_internal %}internal-note{% endif %}" style="position: relative;">
+                    <!-- Timeline Node Marker Dot -->
+                    <span aria-hidden="true" style="position: absolute; left: -1.75rem; top: 1.15rem; width: 10px; height: 10px; border-radius: 50%; background-color: {% if c.is_internal %}#f59e0b{% else %}var(--status-open){% endif %}; border: 2px solid var(--bg-card); box-shadow: 0 0 0 2px var(--border-subtle);"></span>
+
                     <div class="comment-header">
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <span class="comment-author">👤 {{ c.username }}</span>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <span class="comment-author" style="display: flex; align-items: center; gap: 0.35rem;">
+                                <span aria-hidden="true">👤</span>
+                                <span>{{ c.username }}</span>
+                            </span>
                             <span class="role-badge role-{{ c.role_name }}">{{ c.role_name }}</span>
                             {% if c.is_internal %}
-                            <span class="badge" style="background-color: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4);">
-                                🔒 Confidential Agent Note
+                            <span class="badge" style="background-color: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.45); font-size: 0.75rem;">
+                                <span aria-hidden="true">🔒</span> Confidential Agent Note
                             </span>
                             {% endif %}
                         </div>
@@ -65,41 +106,55 @@
                     <div class="comment-body">{{ c.comment }}</div>
                 </div>
                 {% else %}
-                <p style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 1.5rem 0;">
-                    No updates or notes posted on this incident yet.
-                </p>
+                <div style="color: var(--text-muted); font-size: 0.875rem; text-align: center; padding: 2rem 1rem; background-color: rgba(11, 17, 32, 0.5); border: 1px dashed var(--border-color); border-radius: var(--radius-sm);">
+                    <div style="font-size: 1.5rem; margin-bottom: 0.35rem;" aria-hidden="true">💬</div>
+                    <p style="margin: 0; color: var(--text-secondary);">No updates or investigation notes posted on this incident yet.</p>
+                </div>
                 {% endfor %}
             </div>
 
-            <!-- Add Comment Form -->
-            <form action="{{ url_for('tickets.add_comment', ticket_id=ticket.id) }}" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <!-- Add Comment Form Container -->
+            <div style="background-color: rgba(11, 17, 32, 0.6); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1.25rem;">
+                <h3 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--text-primary);">
+                    Post a Response or Work Note
+                </h3>
 
-                <div class="form-group">
-                    <label for="comment" class="form-label">Add a response or update</label>
-                    <textarea name="comment" id="comment" rows="3" class="form-control" placeholder="Type your response here..." required></textarea>
-                </div>
+                <form action="{{ url_for('tickets.add_comment', ticket_id=ticket.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                {% if g.user.role_name in ('admin', 'agent') %}
-                <div style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                    <input type="checkbox" name="is_internal" id="is_internal" value="1">
-                    <label for="is_internal" style="font-size: 0.85rem; color: #fbbf24; cursor: pointer;">
-                        🔒 Mark as internal note (invisible to Requester)
-                    </label>
-                </div>
-                {% endif %}
+                    <div class="form-group">
+                        <label for="comment" class="form-label">Note Content</label>
+                        <textarea name="comment"
+                                  id="comment"
+                                  rows="3"
+                                  class="form-control"
+                                  placeholder="Type your investigation update, resolution details, or user response here..."
+                                  required></textarea>
+                    </div>
 
-                <button type="submit" class="btn btn-secondary">
-                    Post Update &rarr;
-                </button>
-            </form>
-        </div>
+                    {% if g.user.role_name in ('admin', 'agent') %}
+                    <div style="margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.6rem; background-color: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); padding: 0.65rem 0.85rem; border-radius: var(--radius-sm);">
+                        <input type="checkbox" name="is_internal" id="is_internal" value="1" style="cursor: pointer; width: 16px; height: 16px;">
+                        <label for="is_internal" style="font-size: 0.8125rem; color: #fbbf24; cursor: pointer; font-weight: 500; margin: 0;">
+                            <span aria-hidden="true">🔒</span> Mark as confidential internal note (invisible to ticket requester)
+                        </label>
+                    </div>
+                    {% endif %}
+
+                    <div style="display: flex; justify-content: flex-end;">
+                        <button type="submit" class="btn btn-secondary">
+                            Post Update &rarr;
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
     </div>
 
     <!-- Right Column: Status Controls & Metadata -->
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
         <!-- Status & Workflow Management Card -->
-        <div class="card">
+        <section class="card" aria-label="Incident workflow controls">
             <div class="card-header">
                 <h2 class="card-title">Workflow Actions</h2>
             </div>
@@ -132,7 +187,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="assignee_id" class="form-label">Assignee</label>
+                    <label for="assignee_id" class="form-label">Assigned Specialist</label>
                     <select name="assignee_id" id="assignee_id" class="form-select">
                         <option value="">-- Unassigned --</option>
                         {% for ag in agents %}
@@ -143,7 +198,7 @@
                     </select>
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-block">
+                <button type="submit" class="btn btn-primary btn-block" style="margin-top: 0.5rem;">
                     Save Changes
                 </button>
             </form>
@@ -153,35 +208,47 @@
                 <form action="{{ url_for('tickets.update_status', ticket_id=ticket.id) }}" method="POST">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="status" value="closed">
-                    <p style="font-size: 0.85rem; color: #34d399; margin-bottom: 0.75rem;">
-                        The support team has resolved this incident. If your issue is resolved, please close the ticket.
-                    </p>
+                    <div style="background-color: var(--success-light); border: 1px solid var(--success-border); border-radius: var(--radius-sm); padding: 0.85rem; margin-bottom: 1rem;">
+                        <p style="font-size: 0.8125rem; color: #6ee7b7; margin: 0; line-height: 1.5;">
+                            The support team has resolved this incident. If your issue is resolved, please close the ticket.
+                        </p>
+                    </div>
                     <button type="submit" class="btn btn-primary btn-block">
                         Confirm &amp; Close Ticket ✓
                     </button>
                 </form>
                 {% else %}
-                <p style="font-size: 0.85rem; color: var(--text-muted);">
-                    Ticket is currently <strong>{{ ticket.status | replace('_', ' ') }}</strong>. Our support agents are actively reviewing it.
-                </p>
+                <div style="background-color: rgba(11, 17, 32, 0.6); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1rem; text-align: center;">
+                    <p style="font-size: 0.8125rem; color: var(--text-muted); margin: 0; line-height: 1.5;">
+                        Ticket is currently <strong style="color: var(--status-open);">{{ ticket.status | replace('_', ' ') }}</strong>. Our support specialists are actively triaging it.
+                    </p>
+                </div>
                 {% endif %}
             {% endif %}
-        </div>
+        </section>
 
         <!-- Metadata Information -->
-        <div class="card">
+        <section class="card" aria-label="Incident assignment and timeline metadata">
             <div class="card-header">
                 <h2 class="card-title">Incident Metadata</h2>
             </div>
-            <div style="display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.85rem;">
+            <div style="display: flex; flex-direction: column; gap: 1rem; font-size: 0.8125rem;">
                 <div>
                     <span class="form-label">Requester</span>
-                    <div style="font-weight: 500;">{{ ticket.requester_name }}</div>
+                    <div style="font-weight: 600; color: var(--text-primary); font-size: 0.875rem;">{{ ticket.requester_name }}</div>
                     <div style="color: var(--text-muted); font-size: 0.75rem;">{{ ticket.requester_email }}</div>
                 </div>
                 <div>
                     <span class="form-label">Assigned Specialist</span>
-                    <div style="font-weight: 500;">{{ ticket.assignee_name or 'Unassigned' }}</div>
+                    <div style="font-weight: 500; color: var(--text-primary); font-size: 0.875rem;">
+                        {% if ticket.assignee_name %}
+                        <span style="display: flex; align-items: center; gap: 0.35rem;">
+                            <span aria-hidden="true">🛠️</span> {{ ticket.assignee_name }}
+                        </span>
+                        {% else %}
+                        <span style="color: var(--text-muted); font-style: italic;">Unassigned</span>
+                        {% endif %}
+                    </div>
                 </div>
                 <div>
                     <span class="form-label">Created At</span>
@@ -194,34 +261,38 @@
                 {% if ticket.resolved_at %}
                 <div>
                     <span class="form-label">Resolved At</span>
-                    <div class="table-code" style="color: var(--success);">{{ ticket.resolved_at }}</div>
+                    <div class="table-code" style="color: var(--status-resolved);">{{ ticket.resolved_at }}</div>
                 </div>
                 {% endif %}
             </div>
-        </div>
+        </section>
 
         <!-- Ticket Audit History -->
-        <div class="card">
+        <section class="card" aria-label="Ticket audit history">
             <div class="card-header">
                 <h2 class="card-title">Ticket Audit Trail</h2>
+                <span class="badge" style="background-color: rgba(255, 255, 255, 0.05); color: var(--text-muted); font-family: var(--font-mono); font-size: 0.75rem;">
+                    {{ audit_trail|length }} Event(s)
+                </span>
             </div>
             <div style="display: flex; flex-direction: column;">
                 {% for log in audit_trail %}
                 <div class="audit-item">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
                         <span class="audit-action">{{ log.action }}</span>
                         <span class="table-code" style="font-size: 0.7rem;">{{ log.created_at[:16] }}</span>
                     </div>
-                    <div style="color: var(--text-secondary); font-size: 0.75rem; margin-top: 2px;">
+                    <div style="color: var(--text-secondary); font-size: 0.75rem; margin-top: 2px; line-height: 1.4;">
                         {{ log.details }}
                     </div>
                 </div>
                 {% else %}
-                <p style="color: var(--text-muted); font-size: 0.8rem;">No audit logs found for this ticket.</p>
+                <p style="color: var(--text-muted); font-size: 0.8125rem; text-align: center; padding: 1rem 0;">
+                    No audit logs recorded for this ticket.
+                </p>
                 {% endfor %}
             </div>
-        </div>
+        </section>
     </div>
 </div>
 {% endblock %}
-

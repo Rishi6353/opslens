@@ -3,32 +3,46 @@
 {% block title %}Incident Tickets{% endblock %}
 
 {% block content %}
+<!-- Page Header & Action Toolbar -->
 <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
     <div>
-        <h1 style="font-size: 1.75rem; margin-bottom: 0.25rem;">Incident &amp; Service Tickets</h1>
-        <p style="color: var(--text-secondary); font-size: 0.95rem;">
-            {% if g.user.role_name == 'requester' %}
-            Tracking your submitted requests and incidents
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+            <h1 style="font-size: 1.75rem; margin: 0;">Incident &amp; Service Tickets</h1>
+            <span class="badge" style="background-color: var(--primary-light); color: var(--status-open); border: 1px solid var(--primary-border); font-family: var(--font-mono);">
+                {{ tickets|length }} in Queue
+            </span>
+        </div>
+        <p style="color: var(--text-secondary); font-size: 0.9375rem;">
+            {% if g.user and g.user.role_name == 'requester' %}
+            Tracking your submitted incident reports and service requests
             {% else %}
-            Enterprise queue of IT service requests and incident reports
+            Enterprise queue of IT service requests, active incidents, and triage tickets
             {% endif %}
         </p>
     </div>
-    <div>
-        <a href="{{ url_for('tickets.create') }}" class="btn btn-primary">
+    <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+        <a href="{{ url_for('tickets.create') }}" class="btn btn-primary" title="Raise a new incident or service request">
             + Raise New Ticket
         </a>
     </div>
 </div>
 
 <!-- Search & Multi-Facet Filter Bar -->
-<form method="GET" action="{{ url_for('tickets.index') }}" class="filter-bar">
+<form method="GET" action="{{ url_for('tickets.index') }}" class="filter-bar" role="search" aria-label="Incident tickets filter toolbar">
     <div class="filter-input">
-        <input type="text" name="q" class="form-control" placeholder="Search keywords in title or description..." value="{{ search }}">
+        <label for="ticket-search" style="display: none;">Search keywords</label>
+        <input type="text"
+               id="ticket-search"
+               name="q"
+               class="form-control"
+               placeholder="Search keywords in title or description..."
+               value="{{ search }}"
+               aria-label="Search keywords in title or description">
     </div>
 
     <div class="filter-select">
-        <select name="status" class="form-select">
+        <label for="filter-status" style="display: none;">Status</label>
+        <select id="filter-status" name="status" class="form-select" aria-label="Filter by lifecycle status">
             <option value="">All Statuses</option>
             <option value="open" {% if selected_status == 'open' %}selected{% endif %}>Open</option>
             <option value="in_progress" {% if selected_status == 'in_progress' %}selected{% endif %}>In Progress</option>
@@ -38,7 +52,8 @@
     </div>
 
     <div class="filter-select">
-        <select name="priority" class="form-select">
+        <label for="filter-priority" style="display: none;">Priority</label>
+        <select id="filter-priority" name="priority" class="form-select" aria-label="Filter by urgency priority">
             <option value="">All Priorities</option>
             <option value="low" {% if selected_priority == 'low' %}selected{% endif %}>Low</option>
             <option value="medium" {% if selected_priority == 'medium' %}selected{% endif %}>Medium</option>
@@ -48,7 +63,8 @@
     </div>
 
     <div class="filter-select">
-        <select name="category" class="form-select">
+        <label for="filter-category" style="display: none;">Category</label>
+        <select id="filter-category" name="category" class="form-select" aria-label="Filter by classification category">
             <option value="">All Categories</option>
             {% for cat in categories %}
             <option value="{{ cat.id }}" {% if selected_category == cat.id|string %}selected{% endif %}>{{ cat.name }}</option>
@@ -56,39 +72,81 @@
         </select>
     </div>
 
-    <button type="submit" class="btn btn-secondary">Apply Filters</button>
+    <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+        <button type="submit" class="btn btn-secondary" title="Apply filter criteria">
+            Apply Filters
+        </button>
 
-    {% if search or selected_status or selected_priority or selected_category %}
-    <a href="{{ url_for('tickets.index') }}" class="btn btn-ghost" title="Reset all filters">Clear ✕</a>
-    {% endif %}
+        {% if search or selected_status or selected_priority or selected_category %}
+        <a href="{{ url_for('tickets.index') }}" class="btn btn-ghost" title="Reset all active search and filter parameters">
+            Reset ✕
+        </a>
+        {% endif %}
+    </div>
 </form>
 
-<!-- Tickets List Table -->
+<!-- Active Filters Summary (Rendered if any filter is applied) -->
+{% if search or selected_status or selected_priority or selected_category %}
+<div style="display: flex; align-items: center; gap: 0.5rem; margin-top: -1rem; margin-bottom: 1.25rem; flex-wrap: wrap; font-size: 0.8125rem;">
+    <span style="color: var(--text-muted); font-weight: 500;">Active Filters:</span>
+    {% if search %}
+    <span class="badge" style="background-color: rgba(255, 255, 255, 0.06); color: var(--text-primary); border-color: var(--border-color);">
+        Keyword: "{{ search }}"
+    </span>
+    {% endif %}
+    {% if selected_status %}
+    <span class="status-badge status-{{ selected_status }}">
+        Status: {{ selected_status | replace('_', ' ') }}
+    </span>
+    {% endif %}
+    {% if selected_priority %}
+    <span class="priority-badge priority-{{ selected_priority }}">
+        Priority: {{ selected_priority }}
+    </span>
+    {% endif %}
+    {% if selected_category %}
+    {% for cat in categories %}
+        {% if selected_category == cat.id|string %}
+        <span class="badge" style="background-color: rgba(56, 189, 248, 0.12); color: var(--status-open); border-color: rgba(56, 189, 248, 0.35);">
+            Category: {{ cat.name }}
+        </span>
+        {% endif %}
+    {% endfor %}
+    {% endif %}
+    <a href="{{ url_for('tickets.index') }}" style="color: var(--text-muted); text-decoration: underline; margin-left: 0.25rem; font-size: 0.75rem;">
+        Clear All
+    </a>
+</div>
+{% endif %}
+
+<!-- Tickets Catalog Table -->
 <div class="table-responsive">
-    <table class="table">
+    <table class="table" aria-label="Incident Tickets Queue">
         <thead>
             <tr>
-                <th style="width: 70px;">ID</th>
-                <th>Incident Title &amp; Category</th>
-                <th style="width: 110px;">Priority</th>
-                <th style="width: 120px;">Status</th>
-                <th>Requester</th>
-                <th>Assignee</th>
-                <th style="width: 140px;">Created</th>
-                <th style="width: 80px; text-align: center;">Action</th>
+                <th scope="col" style="width: 75px;">ID</th>
+                <th scope="col">Incident Title &amp; Category</th>
+                <th scope="col" style="width: 110px;">Priority</th>
+                <th scope="col" style="width: 130px;">Status</th>
+                <th scope="col" style="width: 150px;">Requester</th>
+                <th scope="col" style="width: 150px;">Assignee</th>
+                <th scope="col" style="width: 140px;">Created</th>
+                <th scope="col" style="width: 85px; text-align: center;">Action</th>
             </tr>
         </thead>
         <tbody>
             {% for ticket in tickets %}
             <tr>
-                <td class="table-code">#{{ ticket.id }}</td>
+                <td class="table-code" style="font-weight: 600;">#{{ ticket.id }}</td>
                 <td>
-                    <a href="{{ url_for('tickets.detail', ticket_id=ticket.id) }}" style="font-weight: 600; color: var(--text-primary); display: block; margin-bottom: 2px;">
+                    <a href="{{ url_for('tickets.detail', ticket_id=ticket.id) }}"
+                       style="font-weight: 600; color: var(--text-primary); display: inline-block; margin-bottom: 3px; font-size: 0.9375rem;">
                         {{ ticket.title }}
                     </a>
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">
-                        📂 {{ ticket.category_name }}
-                    </span>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.35rem;">
+                        <span aria-hidden="true">📂</span>
+                        <span>{{ ticket.category_name }}</span>
+                    </div>
                 </td>
                 <td>
                     <span class="priority-badge priority-{{ ticket.priority }}">{{ ticket.priority }}</span>
@@ -99,30 +157,54 @@
                     </span>
                 </td>
                 <td style="font-size: 0.85rem;">
-                    👤 {{ ticket.requester_name }}
+                    <div style="display: flex; align-items: center; gap: 0.35rem; color: var(--text-primary);">
+                        <span aria-hidden="true">👤</span>
+                        <span>{{ ticket.requester_name }}</span>
+                    </div>
                 </td>
-                <td style="font-size: 0.85rem; color: var(--text-secondary);">
+                <td style="font-size: 0.85rem;">
                     {% if ticket.assignee_name %}
-                    🛠️ {{ ticket.assignee_name }}
+                    <div style="display: flex; align-items: center; gap: 0.35rem; color: var(--text-secondary);">
+                        <span aria-hidden="true">🛠️</span>
+                        <span>{{ ticket.assignee_name }}</span>
+                    </div>
                     {% else %}
-                    <span style="color: var(--text-muted); font-style: italic;">Unassigned</span>
+                    <span style="color: var(--text-muted); font-style: italic; font-size: 0.8125rem;">Unassigned</span>
                     {% endif %}
                 </td>
-                <td class="table-code" style="font-size: 0.8rem;">
+                <td class="table-code" style="font-size: 0.8125rem; white-space: nowrap;">
                     {{ ticket.created_at[:16] }}
                 </td>
                 <td style="text-align: center;">
-                    <a href="{{ url_for('tickets.detail', ticket_id=ticket.id) }}" class="btn btn-ghost btn-sm">
+                    <a href="{{ url_for('tickets.detail', ticket_id=ticket.id) }}"
+                       class="btn btn-ghost btn-sm"
+                       title="View Ticket #{{ ticket.id }} details">
                         View &rarr;
                     </a>
                 </td>
             </tr>
             {% else %}
             <tr>
-                <td colspan="8" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
-                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔍</div>
-                    <div style="font-size: 1rem; font-weight: 500; color: var(--text-secondary);">No incident tickets found</div>
-                    <p style="font-size: 0.85rem; margin-top: 0.25rem;">Try modifying your search criteria or filter selections.</p>
+                <td colspan="8" style="text-align: center; padding: 3.5rem 1rem; color: var(--text-muted);">
+                    <div style="font-size: 2.25rem; margin-bottom: 0.75rem;" aria-hidden="true">🔍</div>
+                    <div style="font-size: 1.05rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.35rem;">
+                        No incident tickets found
+                    </div>
+                    {% if search or selected_status or selected_priority or selected_category %}
+                    <p style="font-size: 0.875rem; margin-bottom: 1.25rem; max-width: 420px; margin-left: auto; margin-right: auto;">
+                        No tickets match your active filter criteria. Try adjusting your search keywords or clearing facet selections.
+                    </p>
+                    <a href="{{ url_for('tickets.index') }}" class="btn btn-secondary btn-sm">
+                        Clear All Filters ✕
+                    </a>
+                    {% else %}
+                    <p style="font-size: 0.875rem; margin-bottom: 1.25rem; max-width: 420px; margin-left: auto; margin-right: auto;">
+                        There are currently no incident tickets registered in this queue.
+                    </p>
+                    <a href="{{ url_for('tickets.create') }}" class="btn btn-primary btn-sm">
+                        + Raise First Ticket
+                    </a>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}
@@ -130,8 +212,15 @@
     </table>
 </div>
 
-<div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: var(--text-muted);">
-    <span>Showing <strong>{{ tickets|length }}</strong> ticket(s)</span>
+<!-- Table Footer Metadata -->
+<div style="margin-top: 1.25rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.8125rem; color: var(--text-muted); flex-wrap: wrap; gap: 0.5rem;">
+    <div>
+        Showing <strong style="color: var(--text-primary);">{{ tickets|length }}</strong> incident ticket(s)
+    </div>
+    <div>
+        <a href="{{ url_for('analytics.dashboard') }}" style="color: var(--text-secondary); text-decoration: none; font-size: 0.8125rem;">
+            &larr; View Analytics Overview
+        </a>
+    </div>
 </div>
 {% endblock %}
-

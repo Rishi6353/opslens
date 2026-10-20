@@ -15,60 +15,138 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
+    <!-- Accessibility Skip Link -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
     <!-- Top Navigation Bar -->
     <header class="navbar">
         <div class="nav-container">
             <div class="nav-brand">
                 <a href="{{ url_for('analytics.dashboard') }}" class="brand-link">
-                    <span class="brand-icon">⚡</span>
+                    <span class="brand-icon" aria-hidden="true">⚡</span>
                     <span class="brand-title">Ops<strong>Lens</strong></span>
                     <span class="brand-tag">v1.2</span>
                 </a>
             </div>
 
-            <nav class="nav-links">
+            <!-- Desktop Navigation Links -->
+            <nav class="nav-links" aria-label="Primary Desktop Navigation">
                 <a href="{{ url_for('analytics.dashboard') }}" class="nav-item {% if request.endpoint == 'analytics.dashboard' %}active{% endif %}">
-                    📊 Dashboard
+                    <span aria-hidden="true">📊</span> Dashboard
                 </a>
                 <a href="{{ url_for('tickets.index') }}" class="nav-item {% if request.endpoint in ('tickets.index', 'tickets.detail', 'tickets.edit') %}active{% endif %}">
-                    🎫 Tickets
+                    <span aria-hidden="true">🎫</span> Tickets
                 </a>
                 <a href="{{ url_for('tickets.create') }}" class="btn btn-primary btn-sm">
                     + New Ticket
                 </a>
                 {% if g.user and g.user.role_name == 'admin' %}
                 <a href="{{ url_for('admin.users') }}" class="nav-item {% if request.endpoint == 'admin.users' %}active{% endif %}">
-                    👥 Users
+                    <span aria-hidden="true">👥</span> Users
                 </a>
                 <a href="{{ url_for('admin.audit_logs') }}" class="nav-item {% if request.endpoint == 'admin.audit_logs' %}active{% endif %}">
-                    📜 Audit Trail
+                    <span aria-hidden="true">📜</span> Audit Trail
                 </a>
                 {% endif %}
             </nav>
 
+            <!-- Desktop User Controls Area -->
             <div class="nav-user">
                 {% if g.user %}
                 <span class="role-badge role-{{ g.user.role_name }}">{{ g.user.role_name | capitalize }}</span>
                 <a href="{{ url_for('auth.profile') }}" class="user-profile-link" title="User Profile">
-                    👤 <strong>{{ g.user.username }}</strong>
+                    <span aria-hidden="true">👤</span> <strong>{{ g.user.username }}</strong>
                 </a>
                 <form action="{{ url_for('auth.logout') }}" method="POST" class="inline-form">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-ghost btn-sm" title="Log out securely">
-                        Logout 🚪
+                        Logout <span aria-hidden="true">🚪</span>
                     </button>
                 </form>
                 {% else %}
                 <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-sm">
-                    Sign In 🔑
+                    Sign In <span aria-hidden="true">🔑</span>
                 </a>
                 {% endif %}
             </div>
+
+            <!-- Mobile Drawer Hamburger Toggle Button -->
+            <button type="button"
+                    id="mobileMenuToggle"
+                    class="nav-mobile-toggle"
+                    aria-label="Open mobile navigation menu"
+                    aria-expanded="false"
+                    aria-controls="mobileDrawer">
+                <span aria-hidden="true">☰</span>
+            </button>
         </div>
     </header>
 
+    <!-- Mobile Navigation Drawer Backdrop -->
+    <div id="drawerBackdrop" class="drawer-backdrop" aria-hidden="true"></div>
+
+    <!-- Mobile Navigation Drawer -->
+    <div id="mobileDrawer" class="nav-drawer" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Mobile Navigation Menu">
+        <div class="nav-drawer-header">
+            <div class="nav-brand">
+                <a href="{{ url_for('analytics.dashboard') }}" class="brand-link">
+                    <span class="brand-icon" aria-hidden="true">⚡</span>
+                    <span class="brand-title">Ops<strong>Lens</strong></span>
+                </a>
+            </div>
+            <button type="button"
+                    id="mobileDrawerClose"
+                    class="btn btn-ghost btn-sm"
+                    aria-label="Close mobile navigation menu"
+                    style="font-size: 1.25rem; line-height: 1; padding: 0.25rem 0.5rem;">
+                &times;
+            </button>
+        </div>
+
+        <nav class="nav-drawer-links" aria-label="Mobile Navigation Links">
+            <a href="{{ url_for('analytics.dashboard') }}" class="nav-item {% if request.endpoint == 'analytics.dashboard' %}active{% endif %}">
+                <span aria-hidden="true">📊</span> Dashboard
+            </a>
+            <a href="{{ url_for('tickets.index') }}" class="nav-item {% if request.endpoint in ('tickets.index', 'tickets.detail', 'tickets.edit') %}active{% endif %}">
+                <span aria-hidden="true">🎫</span> Tickets
+            </a>
+            <a href="{{ url_for('tickets.create') }}" class="btn btn-primary" style="margin: 0.5rem 0; justify-content: flex-start;">
+                + Raise New Ticket
+            </a>
+            {% if g.user and g.user.role_name == 'admin' %}
+            <a href="{{ url_for('admin.users') }}" class="nav-item {% if request.endpoint == 'admin.users' %}active{% endif %}">
+                <span aria-hidden="true">👥</span> Users
+            </a>
+            <a href="{{ url_for('admin.audit_logs') }}" class="nav-item {% if request.endpoint == 'admin.audit_logs' %}active{% endif %}">
+                <span aria-hidden="true">📜</span> Audit Trail
+            </a>
+            {% endif %}
+        </nav>
+
+        <div class="nav-drawer-user">
+            {% if g.user %}
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span class="role-badge role-{{ g.user.role_name }}">{{ g.user.role_name | capitalize }}</span>
+                <a href="{{ url_for('auth.profile') }}" class="user-profile-link" style="padding: 0;">
+                    <span aria-hidden="true">👤</span> <strong>{{ g.user.username }}</strong>
+                </a>
+            </div>
+            <form action="{{ url_for('auth.logout') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-ghost btn-sm btn-block" title="Log out securely">
+                    Logout <span aria-hidden="true">🚪</span>
+                </button>
+            </form>
+            {% else %}
+            <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-block">
+                Sign In <span aria-hidden="true">🔑</span>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
     <!-- Main Content Container -->
-    <main class="main-content">
+    <main id="main-content" class="main-content">
         <div class="container">
             <!-- Flash Message Alerts -->
             {% with messages = get_flashed_messages(with_categories=true) %}
@@ -76,7 +154,7 @@
                 <div class="flash-container">
                     {% for category, message in messages %}
                     <div class="alert alert-{{ category }}" role="alert">
-                        <span class="alert-icon">
+                        <span class="alert-icon" aria-hidden="true">
                             {% if category == 'success' %}✓{% elif category == 'danger' %}⚠{% elif category == 'warning' %}!{% else %}ℹ{% endif %}
                         </span>
                         <span class="alert-text">{{ message }}</span>
@@ -103,4 +181,3 @@
     {% block scripts %}{% endblock %}
 </body>
 </html>
-
