@@ -99,3 +99,135 @@ def change_user_role(user_id):
 
     flash(f"Role for user '{user['username']}' updated to {role_row['name'].capitalize()}.", 'success')
     return redirect(url_for('admin.users'))
+
+
+import math
+import re
+from app.analytics.date_utils import parse_date_range, build_date_where_clause
+
+SENSITIVE_PATTERNS = [
+    re.compile(r'([\w-]*(?:password|passwd|pwd|secret|token|api_key|hash)[\w-]*)\s*[:=]\s*[^\s,;&]+', re.IGNORECASE),
+    re.compile(r'(scrypt|pbkdf2|bcrypt):[^\s,;&]+', re.IGNORECASE)
+]
+
+
+def redact_sensitive_details(text):
+    """
+    Defense-in-depth: Scans audit log contextual text and redacts any residual secrets,
+    passwords, hashes, or tokens prior to presentation in the administrative UI.
+    """
+    if not text:
+        return ""
+    redacted = str(text)
+    for pattern in SENSITIVE_PATTERNS:
+        redacted = pattern.sub(r'\1: [REDACTED]', redacted)
+    return redacted
+
+
+@bp.route('/audit-logs')
+@roles_required('admin')
+def audit_logs():
+    """
+    Administrative Audit Log Explorer.
+    Restricted strictly to administrators for security compliance and incident investigation.
+    Features parameterized filtering, bounded pagination, and sensitive data redaction.
+    """
+    db = get_db()
+
+    action_filter = request.args.get('action', '').strip()
+    user_filter = request.args.get('user_id', '').strip()
+    preset = request.args.get('range', 'all').strip()
+    start_date = request.args.get('start_date', '').strip()
+    end_date = request.args.get('end_date', '').strip()
+
+    # Bounded pagination (protects database from excessive memory consumption)
+    try:
+        page = max(1, int(request.args.get('page', 1)))
+    except (ValueError, TypeError):
+        page = 1
+
+    try:
+        per_page = max(5, min(100, int(request.args.get('per_page', 20))))
+    except (ValueError, TypeError):
+        per_page = 20
+
+    where_clauses = []
+    params = []
+
+    # 1. Action filter
+    if action_filter:
+        where_clauses.append("a.action = ?")
+        params.append(action_filter)
+
+    # 2. Actor / User ID filter
+    if user_filter and user_filter.isdigit():
+        where_clauses.append("a.user_id = ?")
+        params.append(int(user_filter))
+
+    # 3. Date range filter with inclusive end date
+    date_filter = parse_date_range(preset, start_date, end_date)
+    if date_filter['error']:
+        flash(date_filter['error'], 'warning')
+
+    date_where, date_params = build_date_where_clause('a.created_at', date_filter)
+    if date_where != "1=1":
+        where_clauses.append(date_where)
+        params.extend(date_params)
+
+    base_where = (" WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+
+    # Total count query for pagination
+    count_sql = f"""
+        SELECT COUNT(*) AS total
+        FROM audit_logs a
+        LEFT JOIN users u ON a.user_id = u.id
+        {base_where}
+    """
+    total_count = db.execute(count_sql, params).fetchone()['total']
+    total_pages = max(1, math.ceil(total_count / per_page))
+
+    # Enforce page bound
+    if page > total_pages:
+        page = total_pages
+
+    offset = (page - 1) * per_page
+
+    # Query page records
+    data_sql = f"""
+        SELECT a.id, a.action, a.target_type, a.target_id, a.ip_address, a.details, a.created_at,
+               u.username
+        FROM audit_logs a
+        LEFT JOIN users u ON a.user_id = u.id
+        {base_where}
+        ORDER BY a.created_at DESC, a.id DESC
+        LIMIT ? OFFSET ?
+    """
+    page_params = list(params) + [per_page, offset]
+    raw_logs = db.execute(data_sql, page_params).fetchall()
+
+    # Redact sensitive details before passing to template
+    logs = []
+    for row in raw_logs:
+        log_dict = dict(row)
+        log_dict['details'] = redact_sensitive_details(row['details'])
+        logs.append(log_dict)
+
+    # Fetch filter options for dropdowns
+    available_actions = [r['action'] for r in db.execute("SELECT DISTINCT action FROM audit_logs ORDER BY action ASC").fetchall()]
+    available_users = db.execute("SELECT id, username FROM users ORDER BY username ASC").fetchall()
+
+    return render_template(
+        'admin/audit_logs.html',
+        logs=logs,
+        page=page,
+        per_page=per_page,
+        total_count=total_count,
+        total_pages=total_pages,
+        action_filter=action_filter,
+        user_filter=user_filter,
+        date_filter=date_filter,
+        available_actions=available_actions,
+        available_users=available_users
+    )
+
+

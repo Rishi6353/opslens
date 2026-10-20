@@ -3,21 +3,95 @@
 {% block title %}Incident Analytics Dashboard{% endblock %}
 
 {% block content %}
-<div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+<!-- Top Header & Actions -->
+<div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
     <div>
         <h1 style="font-size: 1.85rem; margin-bottom: 0.35rem;">IT Operations &amp; Incident Analytics</h1>
         <p style="color: var(--text-secondary); font-size: 0.95rem;">
             Real-time incident metrics, MTTR performance tracking, and security audit telemetry.
         </p>
     </div>
-    <div style="display: flex; gap: 0.75rem;">
-        <a href="{{ url_for('tickets.create') }}" class="btn btn-primary">
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <a href="{{ url_for('tickets.create') }}" class="btn btn-primary btn-sm">
             + Raise Ticket
         </a>
-        <a href="{{ url_for('tickets.index') }}" class="btn btn-secondary">
+        <a href="{{ url_for('tickets.index') }}" class="btn btn-secondary btn-sm">
             View All Tickets &rarr;
         </a>
+        {% if g.user %}
+        <a href="{{ url_for('tickets.export_csv', range=date_filter.preset, start_date=date_filter.start_date, end_date=date_filter.end_date) }}"
+           class="btn btn-ghost btn-sm" title="Export tickets matching current filters to CSV">
+            📥 Export Tickets CSV
+        </a>
+        <a href="{{ url_for('analytics.export_analytics_summary', range=date_filter.preset, start_date=date_filter.start_date, end_date=date_filter.end_date) }}"
+           class="btn btn-ghost btn-sm" title="Export high-level metrics summary to CSV">
+            📊 Export Summary CSV
+        </a>
+        {% endif %}
     </div>
+</div>
+
+<!-- Date Filter Toolbar Card -->
+<div class="card" style="margin-bottom: 2rem; padding: 1.25rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">📅 Analytics Window:</span>
+            <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8;">
+                {% if date_filter.preset == 'all' %}
+                    All Time
+                {% elif date_filter.preset == '7d' %}
+                    Last 7 Days ({{ date_filter.start_date }} to {{ date_filter.end_date }})
+                {% elif date_filter.preset == '30d' %}
+                    Last 30 Days ({{ date_filter.start_date }} to {{ date_filter.end_date }})
+                {% elif date_filter.preset == '90d' %}
+                    Last 90 Days ({{ date_filter.start_date }} to {{ date_filter.end_date }})
+                {% elif date_filter.preset == 'custom' %}
+                    Custom: {{ date_filter.start_date }} to {{ date_filter.end_date }} (Inclusive)
+                {% endif %}
+            </span>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-muted);">
+            End dates are fully inclusive throughout selected day (&lt; next day 00:00:00)
+        </div>
+    </div>
+
+    <form method="GET" action="{{ url_for('analytics.dashboard') }}" style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+        <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+            <a href="{{ url_for('analytics.dashboard', range='all') }}"
+               class="btn btn-sm {% if date_filter.preset == 'all' %}btn-primary{% else %}btn-secondary{% endif %}">
+                All Time
+            </a>
+            <a href="{{ url_for('analytics.dashboard', range='7d') }}"
+               class="btn btn-sm {% if date_filter.preset == '7d' %}btn-primary{% else %}btn-secondary{% endif %}">
+                7 Days
+            </a>
+            <a href="{{ url_for('analytics.dashboard', range='30d') }}"
+               class="btn btn-sm {% if date_filter.preset == '30d' %}btn-primary{% else %}btn-secondary{% endif %}">
+                30 Days
+            </a>
+            <a href="{{ url_for('analytics.dashboard', range='90d') }}"
+               class="btn btn-sm {% if date_filter.preset == '90d' %}btn-primary{% else %}btn-secondary{% endif %}">
+                90 Days
+            </a>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-left: auto; flex-wrap: wrap;">
+            <input type="hidden" name="range" value="custom">
+            <div style="display: flex; align-items: center; gap: 0.35rem;">
+                <label for="start_date" style="font-size: 0.75rem; color: var(--text-secondary);">From:</label>
+                <input type="date" name="start_date" id="start_date" value="{{ date_filter.start_date }}"
+                       class="form-control" style="font-size: 0.8rem; padding: 0.25rem 0.5rem; width: 140px;">
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.35rem;">
+                <label for="end_date" style="font-size: 0.75rem; color: var(--text-secondary);">To:</label>
+                <input type="date" name="end_date" id="end_date" value="{{ date_filter.end_date }}"
+                       class="form-control" style="font-size: 0.8rem; padding: 0.25rem 0.5rem; width: 140px;">
+            </div>
+            <button type="submit" class="btn btn-secondary btn-sm">
+                Apply Custom Range
+            </button>
+        </div>
+    </form>
 </div>
 
 <!-- 1. KPI Metric Cards Grid -->
@@ -37,7 +111,7 @@
     <div class="kpi-card kpi-info">
         <span class="kpi-label">In Progress</span>
         <span class="kpi-value">{{ in_progress }}</span>
-        <span class="kpi-subtext">Active agent investigations</span>
+        <span class="kpi-subtext">Active investigations</span>
     </div>
 
     <div class="kpi-card kpi-success">
@@ -57,10 +131,41 @@
         <span class="kpi-value">{{ avg_mttr_hours }} <span style="font-size: 1rem; color: var(--text-muted);">hrs</span></span>
         <span class="kpi-subtext">Mean time to resolution</span>
     </div>
+
+    <div class="kpi-card kpi-info">
+        <span class="kpi-label">Median MTTR</span>
+        <span class="kpi-value">{{ median_mttr_hours }} <span style="font-size: 1rem; color: var(--text-muted);">hrs</span></span>
+        <span class="kpi-subtext">Median resolution time</span>
+    </div>
+
+    <div class="kpi-card kpi-danger">
+        <span class="kpi-label">Currently Overdue</span>
+        <span class="kpi-value">{{ currently_overdue_tickets }}</span>
+        <span class="kpi-subtext" title="Demo SLA defaults: Crit 24h, High 48h, Med 72h, Low 120h">
+            Live SLA breaches
+        </span>
+    </div>
 </div>
 
 <!-- 2. Chart.js Analytics Grid -->
 <div class="charts-grid">
+    <!-- Full-width Volume Trend Line Chart -->
+    <div class="chart-card" style="grid-column: 1 / -1;">
+        <div class="card-header">
+            <div>
+                <h2 class="card-title">Incident Volume Trends Over Time</h2>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
+                    Daily incoming incident ticket frequency across the selected analytics window.
+                </p>
+            </div>
+            <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8;">Time Series</span>
+        </div>
+        <div class="chart-container" style="height: 220px;">
+            <canvas id="volumeChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Status Breakdown -->
     <div class="chart-card">
         <div class="card-header">
             <h2 class="card-title">Incident Status Breakdown</h2>
@@ -71,6 +176,7 @@
         </div>
     </div>
 
+    <!-- Priority Breakdown -->
     <div class="chart-card">
         <div class="card-header">
             <h2 class="card-title">Incidents by Priority</h2>
@@ -81,6 +187,7 @@
         </div>
     </div>
 
+    <!-- Category Distribution -->
     <div class="chart-card" style="grid-column: 1 / -1;">
         <div class="card-header">
             <h2 class="card-title">Incidents by Category Classification</h2>
@@ -186,11 +293,14 @@
         </div>
     </div>
 
-    <!-- Right: Enterprise Security Audit Log -->
+    <!-- Right: Enterprise Security Audit Log (Restricted to Administrators) -->
+    {% if g.user and g.user.role_name == 'admin' %}
     <div class="card">
         <div class="card-header">
             <h2 class="card-title">Security &amp; Audit Telemetry</h2>
-            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">Audit Trail</span>
+            <a href="{{ url_for('admin.audit_logs') }}" style="font-size: 0.85rem; color: #34d399;">
+                Full Audit Explorer &rarr;
+            </a>
         </div>
         <div style="display: flex; flex-direction: column;">
             {% for log in recent_audits %}
@@ -212,10 +322,30 @@
             {% endfor %}
         </div>
     </div>
+    {% else %}
+    <!-- Helpdesk Information Card for Non-Admins -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">OpsLens Incident SLAs</h2>
+            <span class="badge" style="background: rgba(59,130,246,0.1); color: var(--primary);">Demo Thresholds</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.85rem; color: var(--text-secondary);">
+            <p>Configurable demo service-level agreements applied across the platform:</p>
+            <ul style="padding-left: 1.25rem; margin: 0; line-height: 1.6;">
+                <li><strong style="color: #f87171;">Critical:</strong> {{ sla_thresholds.critical }} hours resolution target</li>
+                <li><strong style="color: #fb923c;">High:</strong> {{ sla_thresholds.high }} hours resolution target</li>
+                <li><strong style="color: #38bdf8;">Medium:</strong> {{ sla_thresholds.medium }} hours resolution target</li>
+                <li><strong style="color: #cbd5e1;">Low:</strong> {{ sla_thresholds.low }} hours resolution target</li>
+            </ul>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
+                Incident SLA alerts trigger when unresolved tickets exceed their respective priority threshold.
+            </p>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
 {% endblock %}
-

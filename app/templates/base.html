@@ -37,8 +37,11 @@
                     + New Ticket
                 </a>
                 {% if g.user and g.user.role_name == 'admin' %}
-                <a href="{{ url_for('admin.users') }}" class="nav-item {% if request.blueprint == 'admin' %}active{% endif %}">
-                    👥 User Governance
+                <a href="{{ url_for('admin.users') }}" class="nav-item {% if request.endpoint == 'admin.users' %}active{% endif %}">
+                    👥 Users
+                </a>
+                <a href="{{ url_for('admin.audit_logs') }}" class="nav-item {% if request.endpoint == 'admin.audit_logs' %}active{% endif %}">
+                    📜 Audit Trail
                 </a>
                 {% endif %}
             </nav>

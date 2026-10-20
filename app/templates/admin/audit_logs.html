@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+
+{% block title %}Security Audit Trail{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
+            <h1 style="font-size: 1.75rem; margin: 0;">Security Audit Trail</h1>
+            <span class="role-badge role-admin" style="font-size: 0.75rem;">Admin Telemetry</span>
+        </div>
+        <p style="color: var(--text-secondary); font-size: 0.95rem;">
+            Application-level append-only event logging for security forensics, compliance, and user accountability.
+        </p>
+    </div>
+    <div style="display: flex; gap: 0.5rem;">
+        <a href="{{ url_for('admin.users') }}" class="btn btn-secondary btn-sm">
+            👥 User Governance
+        </a>
+        <a href="{{ url_for('analytics.dashboard') }}" class="btn btn-ghost btn-sm">
+            &larr; Return to Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Filter Toolbar -->
+<div class="card" style="margin-bottom: 1.5rem; padding: 1.25rem;">
+    <form method="GET" action="{{ url_for('admin.audit_logs') }}" style="display: flex; flex-direction: column; gap: 1rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; align-items: flex-end;">
+            <!-- Action Filter -->
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="action" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; display: block;">
+                    Security Action
+                </label>
+                <select name="action" id="action" class="form-control" style="font-size: 0.85rem; padding: 0.45rem 0.65rem;">
+                    <option value="">All Security Actions</option>
+                    {% for act in available_actions %}
+                    <option value="{{ act }}" {% if action_filter == act %}selected{% endif %}>{{ act }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Actor Filter -->
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="user_id" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; display: block;">
+                    Actor / User
+                </label>
+                <select name="user_id" id="user_id" class="form-control" style="font-size: 0.85rem; padding: 0.45rem 0.65rem;">
+                    <option value="">All Actors</option>
+                    {% for u in available_users %}
+                    <option value="{{ u.id }}" {% if user_filter == u.id|string %}selected{% endif %}>{{ u.username }} (ID: {{ u.id }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Date Range Preset -->
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="range" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; display: block;">
+                    Time Window
+                </label>
+                <select name="range" id="range" class="form-control" style="font-size: 0.85rem; padding: 0.45rem 0.65rem;">
+                    <option value="all" {% if date_filter.preset == 'all' %}selected{% endif %}>All Time</option>
+                    <option value="7d" {% if date_filter.preset == '7d' %}selected{% endif %}>Last 7 Days</option>
+                    <option value="30d" {% if date_filter.preset == '30d' %}selected{% endif %}>Last 30 Days</option>
+                    <option value="90d" {% if date_filter.preset == '90d' %}selected{% endif %}>Last 90 Days</option>
+                    <option value="custom" {% if date_filter.preset == 'custom' %}selected{% endif %}>Custom Range</option>
+                </select>
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="display: flex; gap: 0.5rem;">
+                <button type="submit" class="btn btn-primary btn-sm" style="flex: 1;">
+                    Filter Logs
+                </button>
+                <a href="{{ url_for('admin.audit_logs') }}" class="btn btn-secondary btn-sm" title="Reset Filters">
+                    Reset
+                </a>
+            </div>
+        </div>
+
+        <!-- Custom Date Inputs (collapsible if custom) -->
+        <div id="customDateRow" style="display: {% if date_filter.preset == 'custom' %}flex{% else %}none{% endif %}; gap: 1rem; flex-wrap: wrap;">
+            <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 150px;">
+                <label for="start_date" style="font-size: 0.75rem; color: var(--text-muted); display: block;">Start Date</label>
+                <input type="date" name="start_date" id="start_date" value="{{ date_filter.start_date }}" class="form-control" style="font-size: 0.85rem; padding: 0.35rem 0.6rem;">
+            </div>
+            <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 150px;">
+                <label for="end_date" style="font-size: 0.75rem; color: var(--text-muted); display: block;">End Date (Inclusive)</label>
+                <input type="date" name="end_date" id="end_date" value="{{ date_filter.end_date }}" class="form-control" style="font-size: 0.85rem; padding: 0.35rem 0.6rem;">
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Logs Results Table -->
+<div class="card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h2 class="card-title">Audit Events Queue</h2>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">
+                Showing {{ logs|length }} of {{ total_count }} recorded security events
+            </span>
+        </div>
+        <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">
+            Live Stream
+        </span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th style="width: 70px;">ID</th>
+                    <th style="width: 160px;">Timestamp</th>
+                    <th style="width: 140px;">Actor</th>
+                    <th>Action</th>
+                    <th style="width: 120px;">Target</th>
+                    <th style="width: 120px;">IP Address</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td class="table-code" style="color: var(--text-muted);">#{{ log.id }}</td>
+                    <td class="table-code" style="font-size: 0.8rem; color: var(--text-secondary);">
+                        {{ log.created_at }}
+                    </td>
+                    <td>
+                        {% if log.username %}
+                        <span style="font-weight: 600; color: var(--text-primary);">{{ log.username }}</span>
+                        {% else %}
+                        <span style="color: var(--text-muted); font-style: italic;">System</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="audit-action" style="font-size: 0.75rem;">
+                            {{ log.action }}
+                        </span>
+                    </td>
+                    <td class="table-code" style="font-size: 0.8rem;">
+                        {% if log.target_type %}
+                            {{ log.target_type }}{% if log.target_id %}:#{{ log.target_id }}{% endif %}
+                        {% else %}
+                            <span style="color: var(--text-muted);">&mdash;</span>
+                        {% endif %}
+                    </td>
+                    <td class="table-code" style="font-size: 0.75rem; color: var(--text-secondary);">
+                        {{ log.ip_address }}
+                    </td>
+                    <td style="font-size: 0.85rem; color: var(--text-secondary); max-width: 320px; word-break: break-word;">
+                        {{ log.details or '&mdash;' }}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+                        No audit events found matching the specified filter criteria.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination Controls -->
+    {% if total_pages > 1 %}
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; border-top: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.75rem;">
+        <span style="font-size: 0.85rem; color: var(--text-muted);">
+            Page <strong>{{ page }}</strong> of <strong>{{ total_pages }}</strong> ({{ total_count }} total entries)
+        </span>
+        <div style="display: flex; gap: 0.5rem;">
+            {% if page > 1 %}
+            <a href="{{ url_for('admin.audit_logs', page=page-1, per_page=per_page, action=action_filter, user_id=user_filter, range=date_filter.preset, start_date=date_filter.start_date, end_date=date_filter.end_date) }}"
+               class="btn btn-secondary btn-sm">
+                &larr; Previous
+            </a>
+            {% endif %}
+
+            {% if page < total_pages %}
+            <a href="{{ url_for('admin.audit_logs', page=page+1, per_page=per_page, action=action_filter, user_id=user_filter, range=date_filter.preset, start_date=date_filter.start_date, end_date=date_filter.end_date) }}"
+               class="btn btn-secondary btn-sm">
+                Next &rarr;
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const rangeSelect = document.getElementById('range');
+        const customDateRow = document.getElementById('customDateRow');
+        if (rangeSelect && customDateRow) {
+            rangeSelect.addEventListener('change', () => {
+                if (rangeSelect.value === 'custom') {
+                    customDateRow.style.display = 'flex';
+                } else {
+                    customDateRow.style.display = 'none';
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
+

@@ -1,12 +1,14 @@
 /**
  * OpsLens Chart.js Visualizations
  * Fetches data asynchronously from /analytics/api/chart-data
+ * Forwards current dashboard date filter query parameters to maintain visualization synchronization.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
     const statusCtx = document.getElementById('statusChart');
     const priorityCtx = document.getElementById('priorityChart');
     const categoryCtx = document.getElementById('categoryChart');
+    const volumeCtx = document.getElementById('volumeChart');
 
     if (!statusCtx || !priorityCtx || !categoryCtx) {
         return; // Not on the dashboard page
@@ -17,7 +19,12 @@ document.addEventListener('DOMContentLoaded', () => {
     Chart.defaults.font.family = "'Inter', sans-serif";
     Chart.defaults.borderColor = '#334155';
 
-    fetch('/analytics/api/chart-data')
+    // Synchronize chart data request with the page's current date filter query params
+    const urlParams = new URLSearchParams(window.location.search);
+    const queryString = urlParams.toString();
+    const apiUrl = '/analytics/api/chart-data' + (queryString ? '?' + queryString : '');
+
+    fetch(apiUrl)
         .then(response => {
             if (!response.ok) {
                 throw new Error('Network response was not ok');
@@ -25,7 +32,57 @@ document.addEventListener('DOMContentLoaded', () => {
             return response.json();
         })
         .then(data => {
-            // 1. Status Breakdown (Doughnut Chart)
+            // 1. Incident Volume Trends Over Time (Line Chart)
+            if (volumeCtx) {
+                if (data.volume_trend && data.volume_trend.labels && data.volume_trend.labels.length > 0) {
+                    new Chart(volumeCtx, {
+                        type: 'line',
+                        data: {
+                            labels: data.volume_trend.labels,
+                            datasets: [{
+                                label: 'Tickets Raised',
+                                data: data.volume_trend.counts,
+                                borderColor: '#38bdf8',
+                                backgroundColor: 'rgba(56, 189, 248, 0.12)',
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 4,
+                                pointHoverRadius: 6,
+                                pointBackgroundColor: '#38bdf8',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        label: context => ` ${context.parsed.y} incidents`
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: { precision: 0 }
+                                },
+                                x: {
+                                    grid: { display: false }
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    const parent = volumeCtx.parentElement;
+                    if (parent) {
+                        parent.innerHTML = '<div style="display: flex; height: 100%; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.85rem;">No incident volume recorded for the selected time window.</div>';
+                    }
+                }
+            }
+
+            // 2. Status Breakdown (Doughnut Chart)
             new Chart(statusCtx, {
                 type: 'doughnut',
                 data: {
@@ -54,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // 2. Priority Distribution (Bar Chart)
+            // 3. Priority Distribution (Bar Chart)
             new Chart(priorityCtx, {
                 type: 'bar',
                 data: {
@@ -86,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // 3. Category Distribution (Horizontal Bar Chart)
+            // 4. Category Distribution (Horizontal Bar Chart)
             new Chart(categoryCtx, {
                 type: 'bar',
                 data: {
@@ -118,4 +175,3 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Failed to load chart analytics data:', error);
         });
 });
-

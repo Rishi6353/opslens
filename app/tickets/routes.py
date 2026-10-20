@@ -1,6 +1,11 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, g
+import io
+import csv
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, g, Response
 from app.db import get_db
 from app.audit.logger import log_audit_event
+from app.auth.decorators import login_required
+from app.analytics.date_utils import parse_date_range, build_date_where_clause
+from app.security.csv_defense import sanitize_csv_cell
 
 bp = Blueprint('tickets', __name__, url_prefix='/tickets')
 
@@ -475,3 +480,125 @@ def update_status(ticket_id):
 
     flash(f"Ticket #{ticket_id} updated: {change_desc}.", 'success')
     return redirect(url_for('tickets.detail', ticket_id=ticket_id))
+
+
+@bp.route('/export/csv')
+@login_required
+def export_csv():
+    """
+    Exports filtered tickets to CSV format.
+    Enforces server-side role authorization:
+      - Requesters can ONLY export their own tickets (prevents IDOR).
+      - Support Agents and Admins can export all tickets matching active filters.
+    Protects all text fields against CSV Formula Injection (CWE-1236).
+    """
+    db = get_db()
+    search = request.args.get('q', '').strip()
+    status_filter = request.args.get('status', '').strip()
+    priority_filter = request.args.get('priority', '').strip()
+    category_filter = request.args.get('category', '').strip()
+    preset = request.args.get('range', 'all').strip()
+    start_date_param = request.args.get('start_date', '').strip()
+    end_date_param = request.args.get('end_date', '').strip()
+
+    where_clauses = []
+    params = []
+
+    # Requester isolation: Requesters may only export tickets they submitted
+    if g.user['role_name'] == 'requester':
+        where_clauses.append("t.requester_id = ?")
+        params.append(g.user['id'])
+
+    # Keyword search across title and description
+    if search:
+        where_clauses.append("(t.title LIKE ? OR t.description LIKE ?)")
+        params.extend([f"%{search}%", f"%{search}%"])
+
+    if status_filter and status_filter in VALID_STATUSES:
+        where_clauses.append("t.status = ?")
+        params.append(status_filter)
+
+    if priority_filter and priority_filter in VALID_PRIORITIES:
+        where_clauses.append("t.priority = ?")
+        params.append(priority_filter)
+
+    if category_filter and category_filter.isdigit():
+        where_clauses.append("t.category_id = ?")
+        params.append(int(category_filter))
+
+    # Date range filtering with inclusive end date
+    date_filter = parse_date_range(preset, start_date_param, end_date_param)
+    date_where, date_params = build_date_where_clause('t.created_at', date_filter)
+    if date_where != "1=1":
+        where_clauses.append(date_where)
+        params.extend(date_params)
+
+    sql = """
+        SELECT t.id, t.title, t.description, t.priority, t.status, t.created_at, t.updated_at, t.resolved_at,
+               c.name AS category_name,
+               req.username AS requester_name,
+               assignee.username AS assignee_name
+        FROM tickets t
+        JOIN categories c ON t.category_id = c.id
+        JOIN users req ON t.requester_id = req.id
+        LEFT JOIN users assignee ON t.assignee_id = assignee.id
+    """
+    if where_clauses:
+        sql += " WHERE " + " AND ".join(where_clauses)
+    sql += " ORDER BY t.created_at DESC"
+
+    tickets = db.execute(sql, params).fetchall()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Header
+    writer.writerow([
+        sanitize_csv_cell("ID"),
+        sanitize_csv_cell("Title"),
+        sanitize_csv_cell("Description"),
+        sanitize_csv_cell("Category"),
+        sanitize_csv_cell("Priority"),
+        sanitize_csv_cell("Status"),
+        sanitize_csv_cell("Requester"),
+        sanitize_csv_cell("Assignee"),
+        sanitize_csv_cell("Created At"),
+        sanitize_csv_cell("Updated At"),
+        sanitize_csv_cell("Resolved At")
+    ])
+
+    for t in tickets:
+        writer.writerow([
+            sanitize_csv_cell(t['id']),
+            sanitize_csv_cell(t['title']),
+            sanitize_csv_cell(t['description']),
+            sanitize_csv_cell(t['category_name']),
+            sanitize_csv_cell(t['priority']),
+            sanitize_csv_cell(t['status']),
+            sanitize_csv_cell(t['requester_name']),
+            sanitize_csv_cell(t['assignee_name'] or "Unassigned"),
+            sanitize_csv_cell(t['created_at']),
+            sanitize_csv_cell(t['updated_at']),
+            sanitize_csv_cell(t['resolved_at'] or "")
+        ])
+
+    csv_data = output.getvalue()
+    output.close()
+
+    log_audit_event(
+        action='TICKETS_EXPORTED_CSV',
+        target_type='ticket',
+        target_id=None,
+        details=f"Exported {len(tickets)} tickets to CSV by user '{g.user['username']}'",
+        user_id=g.user['id']
+    )
+
+    return Response(
+        csv_data,
+        mimetype="text/csv",
+        headers={
+            "Content-Disposition": 'attachment; filename="opslens_tickets_export.csv"',
+            "Cache-Control": "no-cache, no-store, must-revalidate"
+        }
+    )
+

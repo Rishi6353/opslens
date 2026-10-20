@@ -89,6 +89,19 @@ def migrate_db():
         db.execute("UPDATE tickets SET requester_id = ? WHERE requester_id IS NULL", (fallback_id,))
         db.commit()
 
+    # 4. Ensure resolved_at column exists for legacy schemas and add index
+    if 'resolved_at' not in column_names:
+        db.execute("ALTER TABLE tickets ADD COLUMN resolved_at TIMESTAMP")
+        db.commit()
+
+    db.execute("CREATE INDEX IF NOT EXISTS idx_tickets_resolved_at ON tickets(resolved_at)")
+    db.commit()
+
+    # 5. Composite index for status-based date filtering (covering index)
+    if 'status' in column_names and 'created_at' in column_names:
+        db.execute("CREATE INDEX IF NOT EXISTS idx_tickets_status_created ON tickets(status, created_at)")
+        db.commit()
+
     return null_count
 
 

@@ -87,6 +87,8 @@ CREATE INDEX idx_tickets_category ON tickets(category_id);
 CREATE INDEX idx_tickets_requester ON tickets(requester_id);
 CREATE INDEX idx_tickets_assignee ON tickets(assignee_id);
 CREATE INDEX idx_tickets_created_at ON tickets(created_at);
+CREATE INDEX IF NOT EXISTS idx_tickets_resolved_at ON tickets(resolved_at);
+CREATE INDEX IF NOT EXISTS idx_tickets_status_created ON tickets(status, created_at);
 CREATE INDEX idx_audit_logs_action ON audit_logs(action);
 CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at);
 
